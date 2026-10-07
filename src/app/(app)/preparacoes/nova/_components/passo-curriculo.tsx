@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Campo } from "@/components/campo-inline";
 import { curriculoExemplo, type CampoExtraido } from "@/lib/demo/preparacao";
+import type { EntradaCurriculo } from "@/lib/preparacao/salvar";
 import { BotaoPrimario, Processando, RotuloExemplo } from "./comum";
 
 const LIMITE_BYTES = 5 * 1024 * 1024;
@@ -13,7 +14,13 @@ const TIPOS = {
 
 type Fase = "enviar" | "extraindo" | "revisar";
 
-export function PassoCurriculo({ onContinuar }: { onContinuar: () => void }) {
+export function PassoCurriculo({
+  onEntrada,
+  onContinuar,
+}: {
+  onEntrada: (entrada: EntradaCurriculo) => void;
+  onContinuar: () => void;
+}) {
   const [fase, setFase] = useState<Fase>("enviar");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [colado, setColado] = useState("");
@@ -151,13 +158,20 @@ export function PassoCurriculo({ onContinuar }: { onContinuar: () => void }) {
       </label>
 
       <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-        <BotaoPrimario disabled={!pronto} onClick={() => setFase("extraindo")}>
+        <BotaoPrimario
+          disabled={!pronto}
+          onClick={() => {
+            onEntrada(modoColar ? { tipo: "texto", texto: colado.trim() } : { tipo: "arquivo", arquivo: arquivo! });
+            setFase("extraindo");
+          }}
+        >
           Ler currículo
         </BotaoPrimario>
         <button
           type="button"
           onClick={() => {
             setConsentimento(true);
+            onEntrada({ tipo: "exemplo" });
             setFase("extraindo");
           }}
           className="text-sm text-osso underline-offset-4 hover:underline"

@@ -15,8 +15,17 @@ function titulo(nivel: Nivel) {
 }
 const POSICAO: Record<Nivel, number> = { junior: 0, pleno: 50, senior: 100 };
 
-export function PassoDiagnostico({ onContinuar }: { onContinuar: () => void }) {
-  const [liberado, setLiberado] = useState(false);
+export function PassoDiagnostico({
+  logado,
+  onEntrou,
+  onContinuar,
+}: {
+  logado: boolean;
+  onEntrou: () => void;
+  onContinuar: () => void;
+}) {
+  const [semConta, setSemConta] = useState(false);
+  const liberado = logado || semConta;
   const [nivel, setNivel] = useState<Nivel>(d.nivel);
   const ajustado = nivel !== d.nivel;
 
@@ -24,7 +33,7 @@ export function PassoDiagnostico({ onContinuar }: { onContinuar: () => void }) {
     <section aria-labelledby="titulo-diagnostico" className="relative">
       {!liberado && (
         <div className="absolute inset-x-0 top-0 z-20 flex justify-center pt-4 sm:pt-16">
-          <PortaoLogin onEntrou={() => setLiberado(true)} onSemConta={() => setLiberado(true)} />
+          <PortaoLogin onEntrou={onEntrou} onSemConta={() => setSemConta(true)} />
         </div>
       )}
 

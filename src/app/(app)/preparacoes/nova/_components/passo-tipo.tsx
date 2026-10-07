@@ -35,7 +35,13 @@ const TIPOS: {
   },
 ];
 
-export function PassoTipo({ onComecar }: { onComecar: (tipo: TipoEntrevista) => void }) {
+export function PassoTipo({
+  onComecar,
+  ocupado = false,
+}: {
+  onComecar: (tipo: TipoEntrevista) => void;
+  ocupado?: boolean;
+}) {
   const [tipo, setTipo] = useState<TipoEntrevista>("tecnica");
 
   return (
@@ -100,7 +106,9 @@ export function PassoTipo({ onComecar }: { onComecar: (tipo: TipoEntrevista) => 
       </div>
 
       <div className="mt-12">
-        <BotaoPrimario onClick={() => onComecar(tipo)}>Começar a conversa</BotaoPrimario>
+        <BotaoPrimario disabled={ocupado} onClick={() => onComecar(tipo)}>
+          {ocupado ? "Criando o kit…" : "Começar a conversa"}
+        </BotaoPrimario>
       </div>
     </section>
   );

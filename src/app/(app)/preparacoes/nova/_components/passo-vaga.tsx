@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { vagaExemplo, vagaExtraida } from "@/lib/demo/preparacao";
+import type { EntradaVaga } from "@/lib/preparacao/salvar";
 import { BotaoPrimario, Processando, RotuloExemplo } from "./comum";
 
 const MINIMO_CARACTERES = 300;
 
 type Fase = "colar" | "lendo" | "entendida";
 
-export function PassoVaga({ onContinuar }: { onContinuar: () => void }) {
+export function PassoVaga({
+  onEntrada,
+  onContinuar,
+}: {
+  onEntrada: (entrada: EntradaVaga) => void;
+  onContinuar: () => void;
+}) {
   const [fase, setFase] = useState<Fase>("colar");
   const [texto, setTexto] = useState("");
   const [empresa, setEmpresa] = useState("");
@@ -84,7 +91,9 @@ export function PassoVaga({ onContinuar }: { onContinuar: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           setTentou(true);
-          if (!curta) setFase("lendo");
+          if (curta) return;
+          onEntrada({ texto: texto.trim(), empresa, cargo, data, exemplo: texto === vagaExemplo.texto });
+          setFase("lendo");
         }}
       >
         <label className="block">
