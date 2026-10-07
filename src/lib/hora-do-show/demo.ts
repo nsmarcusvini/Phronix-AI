@@ -251,12 +251,14 @@ function emDias(dias: number) {
   return `${data.getFullYear()}-${mes}-${dia}`;
 }
 
-// Recria o kit a cada abertura (entrevista sempre daqui a 3 dias). O histórico
-// de exemplo só entra se ainda não houver revisões, para não apagar a prática real.
+// Recria o kit a cada abertura (entrevista sempre daqui a 3 dias). Respostas e
+// histórico de exemplo só entram na primeira vez, para não apagar edições do Mapa
+// nem a prática real.
 export async function semearDemo() {
   await localDb.transaction("rw", localDb.kits, localDb.qaItems, localDb.reviews, async () => {
     await localDb.kits.put({ ...demoKit, data_entrevista: emDias(3) });
-    await localDb.qaItems.bulkPut(demoItens);
+    const respostas = await localDb.qaItems.where("kit_id").equals(DEMO_KIT_ID).count();
+    if (respostas === 0) await localDb.qaItems.bulkAdd(demoItens);
     const existentes = await localDb.reviews.where("kit_id").equals(DEMO_KIT_ID).count();
     if (existentes === 0) await localDb.reviews.bulkAdd(historicoDemo(new Date()));
   });
