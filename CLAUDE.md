@@ -17,3 +17,4 @@ Next.js 16 (App Router, Turbopack) · TypeScript · Tailwind 4 · Serwist (servi
 - **Tipos do domínio** ficam em `src/lib/domain.ts`, com nomes de campo iguais às colunas do Postgres.
 - **Design.** Nenhuma tela é desenhada fora da `/sites-incriveis`. Cores só pelos tokens da paleta Brasa (`bg-noite`, `text-osso`, `text-fenix`…, definidos em `src/app/globals.css`). Botão primário: fundo Fênix com texto Noite.
 - Cache Components está desligado, porque o route handler do Serwist não é compatível com ele.
+- **Banco.** O schema fica em `supabase/migrations/`. Toda tabela nova precisa de RLS. Colunas de cobrança e custo (`profiles.plano`, `kits.acesso*`, `qa_items.bloqueado`, `ai_usage`, `subscriptions`) só são escritas com `createAdminClient()` (`src/lib/supabase/admin.ts`).
