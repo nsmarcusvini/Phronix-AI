@@ -1,12 +1,14 @@
-import { TelaPendente } from "@/components/tela-pendente";
+import { CabecalhoApp } from "@/components/cabecalho-app";
+import { Preparacoes } from "./_components/preparacoes";
 
 export const metadata = { title: "Minhas preparações" };
 
-export default function Preparacoes() {
+export default async function Page({ searchParams }: PageProps<"/preparacoes">) {
+  const { vazio } = await searchParams;
   return (
-    <TelaPendente
-      titulo="Minhas preparações"
-      descricao="Lista de kits por vaga e tipo de entrevista, com o progresso da Prática."
-    />
+    <>
+      <CabecalhoApp />
+      <Preparacoes vazio={vazio === "1"} />
+    </>
   );
 }
