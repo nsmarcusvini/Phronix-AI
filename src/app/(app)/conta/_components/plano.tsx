@@ -3,57 +3,27 @@
 import { useState } from "react";
 import { PLANOS, VALIDADE_AVULSO_DIAS, type PlanoId } from "@/lib/planos";
 
-type Visao = "gratis" | "avulso" | "pro_mensal";
-
 const DIA = 86_400_000;
 
 function data(d: Date) {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
-// Plano atual + comparação. Pagamento ainda não está ligado.
-export function Plano() {
-  const [visao, setVisao] = useState<Visao>("gratis");
+// Plano atual (do perfil) + comparação. Pagamento ainda não está ligado.
+// avulsoAte: validade do kit avulso mais recente, quando houver.
+export function Plano({ plano, avulsoAte }: { plano: PlanoId; avulsoAte: string | null }) {
   const [aviso, setAviso] = useState<PlanoId | null>(null);
-  // Exemplo: avulso comprado há 12 dias.
-  const [compra] = useState(() => new Date(Date.now() - 12 * DIA));
   const [agora] = useState(() => new Date());
+  const visao: PlanoId = plano === "gratis" && avulsoAte ? "avulso" : plano;
+  const nome = PLANOS.find((p) => p.id === visao)?.nome ?? "Grátis";
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="text-rotulo">
-          <span className="text-ambar">Exemplo.</span> <span className="text-cinza-quente">Ver como:</span>
-        </span>
-        <div role="radiogroup" aria-label="Ver a tela como" className="flex rounded-[3px] border border-fio p-0.5">
-          {(
-            [
-              ["gratis", "Grátis"],
-              ["avulso", "Avulso"],
-              ["pro_mensal", "Pro"],
-            ] as const
-          ).map(([id, nome]) => (
-            <button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={visao === id}
-              onClick={() => setVisao(id)}
-              className={`rounded-[2px] px-3 py-1 transition-colors duration-150 ${
-                visao === id ? "bg-osso text-noite" : "text-cinza-quente hover:text-osso"
-              }`}
-            >
-              {nome}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div key={visao} className="mt-8 animate-revelar">
+      <div className="animate-revelar">
+        <p className="font-display text-display-lg font-medium">{nome}</p>
         {visao === "gratis" && (
           <>
-            <p className="font-display text-display-lg font-medium">Grátis</p>
-            <p className="mt-2 text-cinza-quente">8 de 15 respostas abertas no seu kit.</p>
+            <p className="mt-2 text-cinza-quente">{PLANOS[0].inclui}.</p>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
               <button
                 type="button"
@@ -71,15 +41,11 @@ export function Plano() {
             </div>
           </>
         )}
-        {visao === "avulso" && <Validade compra={compra} agora={agora} />}
-        {visao === "pro_mensal" && (
-          <>
-            <p className="font-display text-display-lg font-medium">Pro mensal</p>
-            <p className="mt-2 text-cinza-quente">
-              Kits ilimitados com uso justo. Renova em{" "}
-              <span className="text-osso tabular-nums">{data(new Date(compra.getTime() + 30 * DIA))}</span>.
-            </p>
-          </>
+        {visao === "avulso" && avulsoAte && (
+          <Validade compra={new Date(new Date(avulsoAte).getTime() - VALIDADE_AVULSO_DIAS * DIA)} agora={agora} />
+        )}
+        {(visao === "pro_mensal" || visao === "pro_trimestral") && (
+          <p className="mt-2 text-cinza-quente">Kits ilimitados com uso justo.</p>
         )}
       </div>
 
@@ -147,7 +113,6 @@ function Validade({ compra, agora }: { compra: Date; agora: Date }) {
 
   return (
     <>
-      <p className="font-display text-display-lg font-medium">Kit avulso</p>
       <p className={`mt-2 ${acabando ? "text-ambar" : "text-cinza-quente"}`}>
         {restantes === 0 ? "Venceu." : `Faltam ${restantes} ${restantes === 1 ? "dia" : "dias"}.`}{" "}
         <span className="text-osso">Vale até {data(fim)}.</span>
