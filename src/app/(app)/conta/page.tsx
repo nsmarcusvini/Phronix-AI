@@ -1,12 +1,13 @@
-import { TelaPendente } from "@/components/tela-pendente";
+import { CabecalhoApp } from "@/components/cabecalho-app";
+import { Conta } from "./_components/conta";
 
 export const metadata = { title: "Conta e plano" };
 
-export default function Conta() {
+export default function Page() {
   return (
-    <TelaPendente
-      titulo="Conta e plano"
-      descricao="Plano atual, pagamento, exportação e exclusão de conta em 1 clique (LGPD)."
-    />
+    <>
+      <CabecalhoApp />
+      <Conta />
+    </>
   );
 }
