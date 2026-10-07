@@ -1,13 +1,8 @@
-import { TelaPendente } from "@/components/tela-pendente";
+import { HoraDoShow } from "../_components/hora-do-show";
 
 export const metadata = { title: "Hora do Show" };
 
-export default async function HoraDoShow({ params }: PageProps<"/hora-do-show/[kitId]">) {
+export default async function Page({ params }: PageProps<"/hora-do-show/[kitId]">) {
   const { kitId } = await params;
-  return (
-    <TelaPendente
-      titulo="Hora do Show"
-      descricao={`Kit ${kitId}. Lê só do IndexedDB: sidebar, busca fuzzy e atalhos, sem rede.`}
-    />
-  );
+  return <HoraDoShow kitId={kitId} />;
 }

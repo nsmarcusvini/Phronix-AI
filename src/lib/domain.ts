@@ -55,6 +55,8 @@ export const qaItem = z.object({
   bullets: z.array(z.string()).max(3),
   ancoras: z.array(z.string()).max(3),
   expandida: z.string().nullable(),
+  // Número de impacto em destaque (ex.: "1,8 s → 0,8 s"), quando existir.
+  numero_impacto: z.string().nullable(),
   case_id: z.uuid().nullable(),
   ordem: z.number().int(),
   fixado: z.boolean(),

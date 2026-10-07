@@ -27,30 +27,56 @@
   --color-palco: var(--palco);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-show: var(--font-atkinson);
+  --font-show-mono: var(--font-atkinson-mono);
 }
 
-html {
-  color-scheme: dark;
+/* Hora do Show · direção "Linha do Olhar"
+   - Tudo o que importa fica no terço superior, logo abaixo da webcam: ao bater
+     o olho, o candidato quase não desvia o olhar da câmera.
+   - Uma família só (Atkinson Hyperlegible Next, feita para leitura de relance);
+     a hierarquia vem de peso e tamanho. A Mono da mesma família só no cronômetro.
+   - Fênix só no número de impacto e no item ativo. Âmbar só em [confirmar].
+   - Movimento quase zero: no máximo 120 ms, sem modais, toasts nem sons. */
+@theme {
+  --text-hs-pergunta: 1.125rem;
+  --text-hs-pergunta--line-height: 1.4;
+  --text-hs-gancho: clamp(1.625rem, 1.3rem + 0.8vw, 1.75rem);
+  --text-hs-gancho--line-height: 1.22;
+  --text-hs-gancho--letter-spacing: -0.012em;
+  --text-hs-ancora: 1.375rem;
+  --text-hs-ancora--line-height: 1.3;
+  --text-hs-bullet: 1.25rem;
+  --text-hs-bullet--line-height: 1.5;
+  --text-hs-sidebar: 0.9375rem;
+  --text-hs-sidebar--line-height: 1.4;
+  --ease-brasa: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-body {
-  background: var(--noite);
-  color: var(--osso);
-  font-family: var(--font-sans), system-ui, sans-serif;
-}
+@layer base {
+  html {
+    color-scheme: dark;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--fenix);
-  outline-offset: 2px;
-}
+  body {
+    background: var(--noite);
+    color: var(--osso);
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  ::before,
-  ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+  :focus-visible {
+    outline: 2px solid var(--fenix);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
