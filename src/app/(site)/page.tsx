@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PLANOS } from "@/lib/planos";
 import { DemoShow } from "./_components/demo-show";
-import { Passos } from "./_components/passos";
-import { Revelar } from "./_components/revelar";
+import { RespostaHero } from "./_components/resposta-hero";
+import { TelaConfirmar, TelaDiagnostico, TelaMapa, TelaPratica } from "./_components/telas";
 
 // Copy literal de docs/landing-copy.md.
+// Direção (frontend-design): um único momento, o hero, em que uma resposta
+// real se monta e o tempo para antes dos 30 s. O resto é quieto: texto ao lado
+// de telas reais do produto, sem entradas animadas por seção.
 
 export const metadata: Metadata = {
   title: { absolute: "Phronix AI · Você sabe o que fez. Agora, saiba contar." },
@@ -38,169 +41,203 @@ const FAQ = [
   },
 ];
 
-function BotaoComecar({ grande = false }: { grande?: boolean }) {
+function BotaoComecar() {
   return (
     <Link
       href="/preparacoes/nova"
-      className={`inline-block rounded-[3px] bg-fenix font-semibold text-noite shadow-fenix transition-transform duration-200 ease-brasa hover:-translate-y-0.5 focus-visible:outline-osso ${
-        grande ? "px-8 py-4 text-lg" : "px-7 py-3.5"
-      }`}
+      className="inline-block rounded-[3px] bg-fenix px-7 py-3.5 font-semibold text-noite transition-transform duration-200 ease-brasa hover:-translate-y-0.5 focus-visible:outline-osso"
     >
       Começar preparação grátis
     </Link>
   );
 }
 
+const PASSOS = [
+  {
+    numero: "01",
+    nome: "Prepare",
+    texto:
+      "Envie o currículo e cole a vaga. Você vê seu nível, o match com a vaga e responde uma conversa curta que encontra os casos que o currículo não conta.",
+  },
+  {
+    numero: "02",
+    nome: "Pratique",
+    texto:
+      "Sessões de 5 minutos com flashcards, âncoras e lacunas. A agenda se ajusta à data da entrevista: faltando três dias, as revisões acontecem em horas.",
+  },
+  {
+    numero: "03",
+    nome: "Use ao vivo",
+    texto:
+      "Na Hora do Show, uma tela preta mostra só o que você vai falar. Busca por poucas letras, atalhos de teclado e funciona sem internet.",
+  },
+];
+
+function Passo({
+  indice,
+  children,
+  abaixo,
+}: {
+  indice: number;
+  children?: React.ReactNode;
+  abaixo?: React.ReactNode;
+}) {
+  const p = PASSOS[indice];
+  return (
+    <li className="border-t border-fio py-14 sm:py-20">
+      <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,22rem)_1fr]">
+        <div>
+          <p className="font-display text-xl tabular-nums text-cinza-quente">{p.numero}</p>
+          <h3 className="mt-2 font-display text-display-lg font-medium">{p.nome}</h3>
+          <p className="mt-4 max-w-[42ch] text-lg leading-relaxed text-cinza-quente">{p.texto}</p>
+        </div>
+        {children && <div className="min-w-0">{children}</div>}
+      </div>
+      {abaixo && <div className="mt-12">{abaixo}</div>}
+    </li>
+  );
+}
+
 export default function Landing() {
   return (
     <>
-      <header className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 sm:px-8">
-        {/* Logo pendente: wordmark provisório. */}
-        <span className="font-display text-lg font-semibold tracking-tight">Phronix</span>
-        <nav aria-label="Principal" className="ml-auto flex items-center gap-6 text-sm">
-          <a href="#como-funciona" className="hidden text-cinza-quente hover:text-osso sm:inline">
-            Como funciona
-          </a>
-          <a href="#planos" className="hidden text-cinza-quente hover:text-osso sm:inline">
-            Planos
-          </a>
-          <Link href="/entrar" className="text-osso">
-            Entrar
-          </Link>
-        </nav>
-      </header>
+      {/* Hero no Palco: a entrevista acontecendo. */}
+      <div className="bg-palco">
+        <header className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-4 sm:px-8">
+          {/* Logo pendente: wordmark provisório. */}
+          <span className="font-display text-lg font-semibold tracking-tight">Phronix</span>
+          <nav aria-label="Principal" className="ml-auto flex items-center gap-6 text-sm">
+            <a href="#como-funciona" className="hidden text-cinza-quente hover:text-osso sm:inline">
+              Como funciona
+            </a>
+            <a href="#planos" className="hidden text-cinza-quente hover:text-osso sm:inline">
+              Planos
+            </a>
+            <Link href="/entrar" className="text-osso">
+              Entrar
+            </Link>
+          </nav>
+        </header>
 
-      <main>
-        {/* 1. Hero */}
-        <section className="mx-auto w-full max-w-6xl px-4 pt-16 pb-28 sm:px-8 sm:pt-28 sm:pb-40">
-          <p className="animate-revelar text-rotulo text-cinza-quente">Para quem tem entrevista marcada</p>
-          <h1 className="mt-6 font-display text-[clamp(2.75rem,1.1rem+6.2vw,6.5rem)] leading-[0.95] font-semibold tracking-[-0.045em]">
-            <span className="block animate-revelar" style={{ animationDelay: "80ms" }}>
+        <section className="mx-auto w-full max-w-6xl px-4 pt-14 pb-24 sm:px-8 sm:pt-24 sm:pb-32">
+          <h1 className="font-display text-[clamp(2.75rem,0.9rem+6.6vw,7rem)] leading-[0.95] font-semibold tracking-[-0.045em]">
+            <span className="block">
               Você sabe <br className="sm:hidden" />o que fez.
             </span>
-            <span className="block animate-revelar text-cinza-quente" style={{ animationDelay: "200ms" }}>
-              Agora, saiba contar.
-            </span>
+            <span className="block">Agora, saiba contar.</span>
           </h1>
-          <div
-            className="mt-12 grid animate-revelar gap-8 sm:mt-16 lg:ml-[38%]"
-            style={{ animationDelay: "360ms" }}
-          >
-            <p className="max-w-[44ch] text-lg leading-relaxed text-osso/90 sm:text-xl">
-              O Phronix transforma seu currículo e a vaga em um roteiro curto, ensaiado e à mão na hora da entrevista.
-              Respostas no seu tom, ligadas a casos reais, para falar em 30 segundos.
-            </p>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <BotaoComecar />
-              <span className="text-sm text-cinza-quente">Primeiro kit grátis, sem cartão.</span>
+          <div className="mt-14 grid gap-16 sm:mt-20 lg:grid-cols-[minmax(0,26rem)_1fr] lg:items-end lg:gap-20">
+            <div>
+              <p className="max-w-[44ch] text-lg leading-relaxed text-osso/85">
+                O Phronix transforma seu currículo e a vaga em um roteiro curto, ensaiado e à mão na hora da entrevista.
+                Respostas no seu tom, ligadas a casos reais, para falar em 30 segundos.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <BotaoComecar />
+                <p className="text-sm text-cinza-quente">
+                  Para quem tem entrevista marcada.
+                  <br />
+                  Primeiro kit grátis, sem cartão.
+                </p>
+              </div>
+            </div>
+            <div className="lg:border-l lg:border-fio lg:pl-12">
+              <RespostaHero />
             </div>
           </div>
         </section>
+      </div>
 
-        {/* 2. O problema */}
-        <section className="border-y border-fio">
-          <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-24 sm:px-8 sm:py-32 lg:grid-cols-[1fr_1fr] lg:gap-16">
-            <Revelar>
-              <h2 className="max-w-[14ch] font-display text-display-lg font-medium text-balance">
-                Travar não é falta de experiência.
-              </h2>
-            </Revelar>
-            <Revelar atraso={120} className="lg:pt-3">
-              <p className="max-w-[42ch] text-xl leading-relaxed text-cinza-quente">
-                Você fez o trabalho. Na hora de contar, a resposta sai longa, sem número e sem ligação com a vaga.{" "}
-                <span className="text-osso">É isso que custa a próxima etapa.</span>
-              </p>
-            </Revelar>
-          </div>
+      <main>
+        {/* O problema */}
+        <section className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-24 sm:px-8 sm:py-32 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-12">
+          <h2 className="max-w-[14ch] font-display text-display-lg font-medium text-balance">
+            Travar não é falta de experiência.
+          </h2>
+          <p className="max-w-[46ch] text-xl leading-relaxed text-cinza-quente lg:pt-2">
+            Você fez o trabalho. Na hora de contar, a resposta sai longa, sem número e sem ligação com a vaga. É isso
+            que custa a próxima etapa.
+          </p>
         </section>
 
-        {/* 3. Como funciona */}
-        <section id="como-funciona" className="mx-auto w-full max-w-6xl scroll-mt-8 px-4 pt-24 sm:px-8 sm:pt-36">
-          <Revelar>
-            <h2 className="max-w-[18ch] font-display text-display-lg font-medium text-balance">
-              Do currículo à entrevista, em três passos.
-            </h2>
-          </Revelar>
-          <Passos />
-        </section>
-
-        {/* 4. Demo da Hora do Show */}
-        <section aria-labelledby="titulo-demo" className="bg-palco">
-          <div className="mx-auto w-full max-w-6xl px-4 pt-16 pb-24 sm:px-8 sm:pt-20 sm:pb-32">
-            <div className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-end lg:gap-16">
-              <Revelar>
-                <h2 id="titulo-demo" className="font-display text-display-lg font-medium text-balance">
+        {/* Como funciona: sequência real, por isso 01, 02, 03. */}
+        <section id="como-funciona" className="mx-auto w-full max-w-6xl scroll-mt-8 px-4 pb-12 sm:px-8">
+          <h2 className="max-w-[18ch] pb-12 font-display text-display-lg font-medium text-balance">
+            Do currículo à entrevista, em três passos.
+          </h2>
+          <ol>
+            <Passo indice={0}>
+              <div className="space-y-6">
+                <TelaDiagnostico />
+                <TelaMapa className="lg:ml-16" />
+              </div>
+            </Passo>
+            <Passo indice={1}>
+              <TelaPratica />
+            </Passo>
+            <Passo
+              indice={2}
+              abaixo={
+                <>
+                  <p className="mb-3 text-sm text-cinza-quente">
+                    Clique na tela e use <kbd className="text-osso">/</kbd> para buscar,{" "}
+                    <kbd className="text-osso">↑ ↓</kbd> para navegar e <kbd className="text-osso">A</kbd> para ver só
+                    as âncoras.
+                  </p>
+                  <DemoShow />
+                  <p className="mt-6 max-w-[62ch] text-sm text-cinza-quente">
+                    É um roteiro pessoal: o Phronix não escuta nem grava a chamada. Alguns testes técnicos proíbem
+                    consulta; respeite as regras do processo.
+                  </p>
+                </>
+              }
+            >
+              <div className="lg:pt-9">
+                <h4 className="max-w-[18ch] font-display text-3xl font-medium text-balance">
                   Na hora H, só o que você vai falar.
-                </h2>
-              </Revelar>
-              <Revelar atraso={120}>
-                <p className="max-w-[44ch] text-lg leading-relaxed text-cinza-quente">
+                </h4>
+                <p className="mt-4 max-w-[46ch] text-lg leading-relaxed text-cinza-quente">
                   Abra ao lado do Meet, do Zoom ou do Teams. Digite duas letras, a pergunta aparece. Bata o olho no
                   gancho e nas três âncoras e volte para a câmera.
                 </p>
-              </Revelar>
-            </div>
-            <Revelar className="mt-12">
-              <p className="mb-3 text-rotulo text-cinza-quente">
-                Experimente: clique na tela e use <kbd className="text-osso">/</kbd> para buscar,{" "}
-                <kbd className="text-osso">↑ ↓</kbd> para navegar e <kbd className="text-osso">A</kbd> para ver só as
-                âncoras.
-              </p>
-              <DemoShow />
-            </Revelar>
-            <p className="mt-6 max-w-[62ch] text-sm text-cinza-quente">
-              É um roteiro pessoal: o Phronix não escuta nem grava a chamada. Alguns testes técnicos proíbem consulta;
-              respeite as regras do processo.
-            </p>
-          </div>
+              </div>
+            </Passo>
+          </ol>
         </section>
 
-        {/* 5. Verdade: seção invertida, Osso com texto Noite; Fênix só em bloco. */}
+        {/* Verdade: a única seção clara; a prova é a própria tela. */}
         <section className="bg-osso text-noite">
-          <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-24 sm:px-8 sm:py-36 lg:grid-cols-[1fr_1fr] lg:gap-16">
-            <Revelar>
-              <span aria-hidden className="block h-2 w-16 bg-fenix" />
-              <h2 className="mt-8 max-w-[14ch] font-display text-display-lg font-semibold text-balance">
+          <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-24 sm:px-8 sm:py-32 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-center">
+            <div>
+              <h2 className="max-w-[14ch] font-display text-display-lg font-semibold text-balance">
                 A IA não inventa nada sobre você.
               </h2>
-            </Revelar>
-            <Revelar atraso={120} className="lg:pt-16">
-              <p className="max-w-[44ch] text-xl leading-relaxed">
-                Nenhuma empresa, projeto, tecnologia ou número que não esteja no seu currículo ou na conversa. Quando falta
-                um dado, ele aparece marcado para você confirmar antes de usar.
+              <p className="mt-6 max-w-[42ch] text-lg leading-relaxed text-noite/80">
+                Nenhuma empresa, projeto, tecnologia ou número que não esteja no seu currículo ou na conversa. Quando
+                falta um dado, ele aparece marcado para você confirmar antes de usar.
               </p>
-              <p aria-hidden className="mt-10 border-t border-noite/15 pt-6 text-lg">
-                Fiz o curso{" "}
-                <span className="rounded-[2px] border border-noite/40 px-1.5 py-0.5 font-medium">
-                  confirmar: nome do curso
-                </span>{" "}
-                no último mês.
-              </p>
-            </Revelar>
+            </div>
+            <div className="text-osso lg:pl-8">
+              <TelaConfirmar />
+            </div>
           </div>
         </section>
 
-        {/* 6. Planos */}
-        <section id="planos" className="mx-auto w-full max-w-6xl scroll-mt-8 px-4 py-24 sm:px-8 sm:py-36">
-          <div className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:gap-16">
-            <Revelar>
-              <h2 className="max-w-[16ch] font-display text-display-lg font-medium text-balance">
-                Comece grátis. Pague quando a entrevista for marcada.
-              </h2>
-            </Revelar>
-            <Revelar atraso={120} className="lg:pt-3">
-              <p className="max-w-[42ch] text-lg leading-relaxed text-cinza-quente">
-                Busca de emprego vem em ondas. Por isso existe o kit avulso, além da assinatura para quem está em vários
-                processos.
-              </p>
-            </Revelar>
+        {/* Planos */}
+        <section id="planos" className="mx-auto w-full max-w-6xl scroll-mt-8 px-4 py-24 sm:px-8 sm:py-32">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-12">
+            <h2 className="max-w-[16ch] font-display text-display-lg font-medium text-balance">
+              Comece grátis. Pague quando a entrevista for marcada.
+            </h2>
+            <p className="max-w-[44ch] text-lg leading-relaxed text-cinza-quente lg:pt-2">
+              Busca de emprego vem em ondas. Por isso existe o kit avulso, além da assinatura para quem está em vários
+              processos.
+            </p>
           </div>
           <ul className="mt-14 border-t border-fio">
-            {PLANOS.map((p, i) => (
-              <Revelar
+            {PLANOS.map((p) => (
+              <li
                 key={p.id}
-                como="li"
-                atraso={i * 80}
                 className="grid gap-x-8 gap-y-1 border-b border-fio py-6 sm:grid-cols-[12rem_1fr_auto] sm:items-baseline"
               >
                 <span className="font-display text-xl font-medium">{p.nome}</span>
@@ -210,30 +247,25 @@ export default function Landing() {
                   {p.periodo && <span className="text-sm text-cinza-quente">{p.periodo}</span>}
                   {p.nota && <span className="block text-rotulo text-cinza-quente">{p.nota}</span>}
                 </span>
-              </Revelar>
+              </li>
             ))}
           </ul>
           <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
             <BotaoComecar />
-            <span className="text-rotulo text-cinza-quente">Preços de teste do beta.</span>
+            <span className="text-sm text-cinza-quente">Preços de teste do beta.</span>
           </div>
         </section>
 
-        {/* 7. FAQ */}
+        {/* FAQ */}
         <section className="border-t border-fio">
-          <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-24 sm:px-8 sm:py-32 lg:grid-cols-[1fr_2fr] lg:gap-16">
-            <Revelar>
-              <h2 className="font-display text-display-lg font-medium">Perguntas frequentes</h2>
-            </Revelar>
+          <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-24 sm:px-8 sm:py-32 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-12">
+            <h2 className="font-display text-display-lg font-medium">Perguntas frequentes</h2>
             <div className="border-t border-fio">
               {FAQ.map((f) => (
                 <details key={f.pergunta} className="group border-b border-fio">
                   <summary className="flex cursor-pointer list-none items-baseline justify-between gap-6 py-5 text-lg font-medium [&::-webkit-details-marker]:hidden">
                     {f.pergunta}
-                    <span
-                      aria-hidden
-                      className="text-cinza-quente transition-transform duration-300 ease-brasa group-open:rotate-45"
-                    >
+                    <span aria-hidden className="text-cinza-quente transition-transform duration-200 ease-brasa group-open:rotate-45">
                       +
                     </span>
                   </summary>
@@ -244,22 +276,16 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* 8. Chamada final: o único gradiente da paleta, como luz de palco. */}
-        <section className="relative overflow-hidden border-t border-fio">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -bottom-1/2 left-1/2 h-[42rem] w-[70rem] max-w-[160vw] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgb(255_90_31/0.38),rgb(255_193_77/0.14)_55%,transparent)] blur-2xl"
-          />
-          <div className="relative mx-auto w-full max-w-6xl px-4 py-32 text-left sm:px-8 sm:py-44">
-            <Revelar>
-              <h2 className="font-display text-[clamp(2.5rem,1rem+5.6vw,6rem)] leading-[0.95] font-semibold tracking-[-0.045em]">
-                <span className="lg:block">Sua próxima entrevista </span>
-                <span className="lg:block">merece um roteiro.</span>
-              </h2>
-            </Revelar>
-            <Revelar atraso={160} className="mt-12">
-              <BotaoComecar grande />
-            </Revelar>
+        {/* Chamada final */}
+        <section className="border-t border-fio">
+          <div className="mx-auto w-full max-w-6xl px-4 py-28 sm:px-8 sm:py-40">
+            <h2 className="font-display text-[clamp(2.5rem,1rem+5vw,5.25rem)] leading-[0.95] font-semibold tracking-[-0.045em]">
+              <span className="lg:block">Sua próxima entrevista </span>
+              <span className="lg:block">merece um roteiro.</span>
+            </h2>
+            <div className="mt-12">
+              <BotaoComecar />
+            </div>
           </div>
         </section>
       </main>

@@ -124,11 +124,11 @@ export function PassoDiagnostico({
 
 // O momento do diagnóstico: o ponto do candidato e a faixa que a vaga pede,
 // na mesma régua. A distância entre os dois é a estratégia.
-function ReguaSenioridade({ nivel }: { nivel: Nivel }) {
+export function ReguaSenioridade({ nivel, className = "mt-12" }: { nivel: Nivel; className?: string }) {
   const { de, ate } = vagaExtraida.nivelPedido;
 
   return (
-    <div className="mt-12 max-w-xl" aria-label={`Você: ${NOME_NIVEL[nivel]}. A vaga pede ${vagaExtraida.nivelPedido.texto}.`}>
+    <div className={`${className} max-w-xl`} aria-label={`Você: ${NOME_NIVEL[nivel]}. A vaga pede ${vagaExtraida.nivelPedido.texto}.`}>
       <div aria-hidden className="relative h-6">
         <span
           className="absolute -top-1 h-2 border-x border-t border-cinza-quente"
