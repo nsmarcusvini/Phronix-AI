@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Kit, QaItem, Review } from "@/lib/domain";
+import { KitSemMapa } from "@/components/kit-sem-mapa";
 import { localDb } from "@/lib/local-db";
+import { enfileirar, sincronizarKit } from "@/lib/sync/sincronizar";
 import { DEMO_KIT_ID, semearDemo } from "@/lib/hora-do-show/demo";
 import { CATEGORIAS } from "@/lib/hora-do-show/categorias";
 import { bloqueada } from "@/lib/mapa/bloqueio";
@@ -31,7 +33,7 @@ const ESPERA_SALVAR = 400;
 export function Mapa({ kitId }: { kitId: string }) {
   const demo = kitId === "demo";
   const id = demo ? DEMO_KIT_ID : kitId;
-  const [dados, setDados] = useState<Dados | "ausente" | null>(null);
+  const [dados, setDados] = useState<Dados | "ausente" | "sem-mapa" | null>(null);
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [editorNoCelular, setEditorNoCelular] = useState(false);
   const pendentes = useRef(new Map<string, { item: QaItem; timer: ReturnType<typeof setTimeout> }>());
@@ -40,13 +42,14 @@ export function Mapa({ kitId }: { kitId: string }) {
     (async () => {
       try {
         if (demo) await semearDemo();
+        else await sincronizarKit(id);
         const [kit, itens, reviews] = await Promise.all([
           localDb.kits.get(id),
           localDb.qaItems.where("kit_id").equals(id).toArray(),
           localDb.reviews.where("kit_id").equals(id).toArray(),
         ]);
         if (!kit || itens.length === 0) {
-          setDados("ausente");
+          setDados(kit ? "sem-mapa" : "ausente");
           return;
         }
         const ordenados = ordenar(itens);
@@ -64,13 +67,15 @@ export function Mapa({ kitId }: { kitId: string }) {
     return () => {
       for (const { item, timer } of fila.values()) {
         clearTimeout(timer);
-        void localDb.qaItems.put(item);
+        void localDb.qaItems.put(item).then(() => enfileirar(item.kit_id, "resposta", item.id));
       }
       fila.clear();
     };
   }, []);
 
   if (dados === null) return <p className="sr-only" role="status">Carregando o mapa</p>;
+
+  if (dados === "sem-mapa") return <KitSemMapa kitId={kitId} />;
 
   if (dados === "ausente") {
     return (
@@ -100,7 +105,7 @@ export function Mapa({ kitId }: { kitId: string }) {
     if (atual) clearTimeout(atual.timer);
     const timer = setTimeout(() => {
       pendentes.current.delete(item.id);
-      void localDb.qaItems.put(item);
+      void localDb.qaItems.put(item).then(() => enfileirar(item.kit_id, "resposta", item.id));
     }, ESPERA_SALVAR);
     pendentes.current.set(item.id, { item, timer });
   }
@@ -125,7 +130,10 @@ export function Mapa({ kitId }: { kitId: string }) {
     const renumerados = lista.map((item, i) =>
       item.ordem === i + 1 ? item : { ...item, ordem: i + 1, updated_at: agoraIso },
     );
-    void localDb.qaItems.bulkPut(renumerados.filter((item, i) => item !== lista[i]));
+    const mudados = renumerados.filter((item, i) => item !== lista[i]);
+    void localDb.qaItems
+      .bulkPut(mudados)
+      .then(() => Promise.all(mudados.map((m) => enfileirar(m.kit_id, "resposta", m.id))));
     setDados({ ...carregado, itens: renumerados });
   }
 

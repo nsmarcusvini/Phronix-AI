@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Kit, QaItem, Review } from "@/lib/domain";
+import { KitSemMapa } from "@/components/kit-sem-mapa";
 import { localDb } from "@/lib/local-db";
+import { enfileirar, sincronizarKit } from "@/lib/sync/sincronizar";
 import { DEMO_KIT_ID, semearDemo } from "@/lib/hora-do-show/demo";
 import {
   TAMANHO_SESSAO,
@@ -31,7 +33,7 @@ type Fase =
 export function Pratica({ kitId }: { kitId: string }) {
   const demo = kitId === "demo";
   const id = demo ? DEMO_KIT_ID : kitId;
-  const [dados, setDados] = useState<Dados | "ausente" | null>(null);
+  const [dados, setDados] = useState<Dados | "ausente" | "sem-mapa" | null>(null);
   const [fase, setFase] = useState<Fase>({ tipo: "hoje" });
 
   const carregar = useCallback(async () => {
@@ -41,7 +43,7 @@ export function Pratica({ kitId }: { kitId: string }) {
         localDb.qaItems.where("kit_id").equals(id).toArray(),
         localDb.reviews.where("kit_id").equals(id).toArray(),
       ]);
-      setDados(kit && itens.length ? { kit, itens, reviews, agora: new Date() } : "ausente");
+      setDados(!kit ? "ausente" : itens.length ? { kit, itens, reviews, agora: new Date() } : "sem-mapa");
     } catch {
       setDados("ausente");
     }
@@ -50,11 +52,14 @@ export function Pratica({ kitId }: { kitId: string }) {
   useEffect(() => {
     (async () => {
       if (demo) await semearDemo().catch(() => {});
+      else await sincronizarKit(id);
       await carregar();
     })();
-  }, [demo, carregar]);
+  }, [demo, carregar, id]);
 
   if (dados === null) return <p className="sr-only" role="status">Carregando a prática</p>;
+
+  if (dados === "sem-mapa") return <KitSemMapa kitId={kitId} />;
 
   if (dados === "ausente") {
     return (
@@ -81,8 +86,9 @@ export function Pratica({ kitId }: { kitId: string }) {
   async function registrar({ estado, exercicio }: ItemDaFila, nota: Nota) {
     const agora = new Date();
     const caixa = aplicarNota(estado.caixa, nota);
+    const reviewId = crypto.randomUUID();
     await localDb.reviews.add({
-      id: crypto.randomUUID(),
+      id: reviewId,
       kit_id: id,
       qa_item_id: estado.item.id,
       exercicio,
@@ -91,6 +97,7 @@ export function Pratica({ kitId }: { kitId: string }) {
       proxima_revisao: proximaRevisao(caixa, dias, agora).toISOString(),
       revisado_em: agora.toISOString(),
     });
+    await enfileirar(id, "review", reviewId);
   }
 
   if (fase.tipo === "sessao") {
