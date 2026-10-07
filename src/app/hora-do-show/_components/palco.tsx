@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Categoria, QaItem } from "@/lib/domain";
 import { indexar } from "@/lib/hora-do-show/busca";
 import { CATEGORIAS } from "@/lib/hora-do-show/categorias";
@@ -16,9 +16,12 @@ type Props = {
   modo: Modo;
   lado: Lado;
   onModo: (modo: Modo) => void;
+  // Embutido (demo da landing): altura própria e teclado só com o foco dentro.
+  embutido?: boolean;
 };
 
-export function Palco({ itens, demo, modo, lado, onModo }: Props) {
+export function Palco({ itens, demo, modo, lado, onModo, embutido = false }: Props) {
+  const raiz = useRef<HTMLDivElement>(null);
   const [atualId, setAtualId] = useState(() => (itens.find((i) => i.fixado) ?? itens[0]).id);
   const [abertas, setAbertas] = useState(() => new Set<Categoria>(CATEGORIAS.map((c) => c.id)));
   const [respondidas, setRespondidas] = useState(() => new Set<string>());
@@ -121,8 +124,11 @@ export function Palco({ itens, demo, modo, lado, onModo }: Props) {
       }
     }
 
-    window.addEventListener("keydown", aoTeclar);
-    return () => window.removeEventListener("keydown", aoTeclar);
+    const alvo = embutido ? raiz.current : window;
+    if (!alvo) return;
+    const ouvir = aoTeclar as EventListener;
+    alvo.addEventListener("keydown", ouvir);
+    return () => alvo.removeEventListener("keydown", ouvir);
   });
 
   const lista = (
@@ -139,7 +145,12 @@ export function Palco({ itens, demo, modo, lado, onModo }: Props) {
   const mostrarLista = listaAberta && !foco;
 
   return (
-    <div className="relative flex h-dvh overflow-hidden">
+    <div
+      ref={raiz}
+      tabIndex={embutido ? 0 : undefined}
+      aria-label={embutido ? "Demonstração da Hora do Show. Clique e use o teclado." : undefined}
+      className={`relative flex overflow-hidden ${embutido ? "h-full focus-visible:outline-none" : "h-dvh"}`}
+    >
       {/* Monitor: lista fixa, do lado oposto ao da chamada. */}
       {!gaveta && mostrarLista && (
         <aside

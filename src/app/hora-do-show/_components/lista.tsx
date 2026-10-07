@@ -103,8 +103,16 @@ function Item({
 }) {
   const ref = useRef<HTMLButtonElement>(null);
 
+  // Mantém o item ativo à vista rolando só a própria lista, nunca a página
+  // (a Hora do Show também roda embutida na landing).
   useEffect(() => {
-    if (atual) ref.current?.scrollIntoView({ block: "nearest" });
+    const item = ref.current;
+    const lista = item?.closest("nav");
+    if (!atual || !item || !lista) return;
+    const a = item.getBoundingClientRect();
+    const b = lista.getBoundingClientRect();
+    if (a.top < b.top) lista.scrollTop -= b.top - a.top;
+    else if (a.bottom > b.bottom) lista.scrollTop += a.bottom - b.bottom;
   }, [atual]);
 
   return (
