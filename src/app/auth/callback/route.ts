@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { destinoSeguro } from "@/lib/destino";
 import { createClient } from "@/lib/supabase/server";
 
 // Volta do link de confirmação do e-mail: troca o código por sessão e segue
@@ -6,8 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const codigo = searchParams.get("code");
-  const proximo = searchParams.get("next") ?? "/preparacoes";
-  const destino = proximo.startsWith("/") && !proximo.startsWith("//") ? proximo : "/preparacoes";
+  const destino = destinoSeguro(searchParams.get("next"));
 
   if (codigo) {
     const supabase = await createClient();

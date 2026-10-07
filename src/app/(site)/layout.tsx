@@ -1,7 +1,6 @@
-import { Atkinson_Hyperlegible_Mono, Atkinson_Hyperlegible_Next, Funnel_Display, Funnel_Sans } from "next/font/google";
+import { Atkinson_Hyperlegible_Mono, Atkinson_Hyperlegible_Next } from "next/font/google";
+import { funnelDisplay, funnelSans } from "../fontes";
 
-const funnelDisplay = Funnel_Display({ variable: "--font-funnel-display", subsets: ["latin", "latin-ext"] });
-const funnelSans = Funnel_Sans({ variable: "--font-funnel-sans", subsets: ["latin", "latin-ext"] });
 // A demo da landing é a Hora do Show de verdade, com a fonte dela.
 const atkinson = Atkinson_Hyperlegible_Next({ variable: "--font-atkinson", subsets: ["latin", "latin-ext"] });
 const atkinsonMono = Atkinson_Hyperlegible_Mono({ variable: "--font-atkinson-mono", subsets: ["latin"] });
