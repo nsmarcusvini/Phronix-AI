@@ -1,13 +1,12 @@
-import { TelaPendente } from "@/components/tela-pendente";
+import type { TipoEntrevista } from "@/lib/domain";
+import { Conversa } from "./_components/conversa";
 
 export const metadata = { title: "Conversa" };
 
-export default async function Conversa({ params }: PageProps<"/kits/[kitId]/conversa">) {
-  const { kitId } = await params;
-  return (
-    <TelaPendente
-      titulo="Conversa"
-      descricao={`Kit ${kitId}. Garimpo de cases: uma pergunta por vez, chips de resposta rápida e barra de cobertura dos requisitos.`}
-    />
-  );
+const TIPOS: TipoEntrevista[] = ["rh", "tecnica", "lideranca"];
+
+export default async function Page({ searchParams }: PageProps<"/kits/[kitId]/conversa">) {
+  const { tipo } = await searchParams;
+  const escolhido = TIPOS.find((t) => t === tipo) ?? "tecnica";
+  return <Conversa tipo={escolhido} />;
 }

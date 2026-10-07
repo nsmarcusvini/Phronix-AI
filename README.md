@@ -20,7 +20,7 @@ O service worker só é registrado em produção (`npm run build && npm start`).
 src/
   app/
     (site)/             landing
-    (auth)/entrar/      cadastro (magic link)
+    (auth)/entrar/      cadastro (e-mail e senha)
     (app)/              preparações, wizard, kits (conversa, mapa, prática), conta
     hora-do-show/       tela ao vivo, offline, fundo #000
     serwist/            serve o service worker (sw.ts)

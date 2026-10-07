@@ -6,7 +6,7 @@ export default function Entrar() {
   return (
     <TelaPendente
       titulo="Cadastro"
-      descricao="Magic link por e-mail. Pedido só na hora de ver o diagnóstico."
+      descricao="E-mail e senha. Pedido só na hora de ver o diagnóstico."
     />
   );
 }

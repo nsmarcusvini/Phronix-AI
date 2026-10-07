@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { QaItem } from "@/lib/domain";
 import { CATEGORIAS } from "@/lib/hora-do-show/categorias";
 import { contarPalavras, fala, pendenciasDeConfirmacao } from "@/lib/mapa/fala";
-import { Campo } from "./campo";
+import { Campo } from "@/components/campo-inline";
 import { Regua } from "./regua";
 
 const NOME_CATEGORIA = new Map(CATEGORIAS.map((c) => [c.id, c.nome]));
