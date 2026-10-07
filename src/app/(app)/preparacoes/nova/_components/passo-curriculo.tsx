@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { Campo } from "@/components/campo-inline";
-import { curriculoExemplo, type CampoExtraido } from "@/lib/demo/preparacao";
+import type { CurriculoExtraido } from "@/lib/ai/esquemas";
+import { curriculoExemplo } from "@/lib/demo/preparacao";
 import type { EntradaCurriculo } from "@/lib/preparacao/salvar";
 import { BotaoPrimario, Processando, RotuloExemplo } from "./comum";
 
@@ -13,12 +14,17 @@ const TIPOS = {
 } as const;
 
 type Fase = "enviar" | "extraindo" | "revisar";
+type CampoCv = { valor: string; baixaConfianca: boolean };
+
+const ETAPAS = ["Lendo o arquivo", "Separando experiências", "Procurando números e conquistas", "Conferindo datas"];
 
 export function PassoCurriculo({
   onEntrada,
+  onConfirmado,
   onContinuar,
 }: {
   onEntrada: (entrada: EntradaCurriculo) => void;
+  onConfirmado: (curriculo: CurriculoExtraido, exemplo: boolean) => void;
   onContinuar: () => void;
 }) {
   const [fase, setFase] = useState<Fase>("enviar");
@@ -28,6 +34,7 @@ export function PassoCurriculo({
   const [consentimento, setConsentimento] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [arrastando, setArrastando] = useState(false);
+  const [extraido, setExtraido] = useState<{ cv: CurriculoExtraido; exemplo: boolean } | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
 
   function escolher(f: File | undefined) {
@@ -44,6 +51,44 @@ export function PassoCurriculo({
     setArquivo(f);
   }
 
+  async function ler() {
+    const dados = new FormData();
+    if (modoColar) {
+      onEntrada({ tipo: "texto", texto: colado.trim() });
+      dados.set("texto", colado.trim());
+    } else if (arquivo) {
+      onEntrada({ tipo: "arquivo", arquivo });
+      dados.set("arquivo", arquivo);
+    } else return;
+
+    setErro(null);
+    setFase("extraindo");
+    const resposta = await fetch("/api/ia/curriculo", { method: "POST", body: dados }).catch(() => null);
+    const corpo = await resposta?.json().catch(() => null);
+
+    if (!resposta?.ok || !corpo?.curriculo) {
+      setErro(corpo?.erro ?? "Não deu para ler o currículo agora. Tente de novo.");
+      setFase("enviar");
+      return;
+    }
+    const cv = corpo.curriculo as CurriculoExtraido;
+    if (cv.ilegivel) {
+      setErro("Não consegui ler o texto desse arquivo; parece um PDF escaneado. Cole o texto do currículo.");
+      setModoColar(true);
+      setFase("enviar");
+      return;
+    }
+    setExtraido({ cv, exemplo: false });
+    setFase("revisar");
+  }
+
+  function usarExemplo() {
+    setConsentimento(true);
+    onEntrada({ tipo: "exemplo" });
+    setExtraido({ cv: curriculoExemplo, exemplo: true });
+    setFase("extraindo");
+  }
+
   const pronto = consentimento && (modoColar ? colado.trim().length > 200 : arquivo !== null);
 
   if (fase === "extraindo") {
@@ -53,16 +98,28 @@ export function PassoCurriculo({
           Lendo seu currículo
         </h1>
         <div className="mt-10">
-          <Processando
-            etapas={["Lendo o arquivo", "Separando experiências", "Procurando números e conquistas", "Conferindo datas"]}
-            onFim={() => setFase("revisar")}
-          />
+          {extraido?.exemplo ? (
+            <Processando etapas={ETAPAS} onFim={() => setFase("revisar")} />
+          ) : (
+            <Processando etapas={ETAPAS} duracao={6000} />
+          )}
         </div>
       </section>
     );
   }
 
-  if (fase === "revisar") return <Revisao onContinuar={onContinuar} />;
+  if (fase === "revisar" && extraido) {
+    return (
+      <Revisao
+        inicial={extraido.cv}
+        exemplo={extraido.exemplo}
+        onConfirmar={(cv) => {
+          onConfirmado(cv, extraido.exemplo);
+          onContinuar();
+        }}
+      />
+    );
+  }
 
   return (
     <section aria-labelledby="titulo-curriculo">
@@ -158,24 +215,10 @@ export function PassoCurriculo({
       </label>
 
       <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
-        <BotaoPrimario
-          disabled={!pronto}
-          onClick={() => {
-            onEntrada(modoColar ? { tipo: "texto", texto: colado.trim() } : { tipo: "arquivo", arquivo: arquivo! });
-            setFase("extraindo");
-          }}
-        >
+        <BotaoPrimario disabled={!pronto} onClick={() => void ler()}>
           Ler currículo
         </BotaoPrimario>
-        <button
-          type="button"
-          onClick={() => {
-            setConsentimento(true);
-            onEntrada({ tipo: "exemplo" });
-            setFase("extraindo");
-          }}
-          className="text-sm text-osso underline-offset-4 hover:underline"
-        >
+        <button type="button" onClick={usarExemplo} className="text-sm text-osso underline-offset-4 hover:underline">
           Usar currículo de exemplo
         </button>
       </div>
@@ -183,9 +226,18 @@ export function PassoCurriculo({
   );
 }
 
-// Revisão de 1 minuto: tudo editável, baixa confiança em Âmbar.
-function Revisao({ onContinuar }: { onContinuar: () => void }) {
-  const [cv, setCv] = useState(curriculoExemplo);
+// Revisão de 1 minuto: tudo editável, baixa confiança em Âmbar até ser corrigida.
+function Revisao({
+  inicial,
+  exemplo,
+  onConfirmar,
+}: {
+  inicial: CurriculoExtraido;
+  exemplo: boolean;
+  onConfirmar: (cv: CurriculoExtraido) => void;
+}) {
+  const [cv, setCv] = useState(inicial);
+  const corrigido = (valor: string): CampoCv => ({ valor, baixaConfianca: false });
   const duvidas =
     [cv.nome, cv.titulo, cv.formacao, cv.idiomas].filter((c) => c.baixaConfianca).length +
     cv.experiencias.reduce(
@@ -196,7 +248,7 @@ function Revisao({ onContinuar }: { onContinuar: () => void }) {
   function atualizarExperiencia(i: number, chave: "empresa" | "cargo" | "periodo", valor: string) {
     setCv((c) => ({
       ...c,
-      experiencias: c.experiencias.map((e, k) => (k === i ? { ...e, [chave]: { valor } } : e)),
+      experiencias: c.experiencias.map((e, k) => (k === i ? { ...e, [chave]: corrigido(valor) } : e)),
     }));
   }
 
@@ -204,7 +256,7 @@ function Revisao({ onContinuar }: { onContinuar: () => void }) {
     setCv((c) => ({
       ...c,
       experiencias: c.experiencias.map((e, k) =>
-        k === i ? { ...e, conquistas: e.conquistas.map((q, m) => (m === j ? { valor } : q)) } : e,
+        k === i ? { ...e, conquistas: e.conquistas.map((q, m) => (m === j ? corrigido(valor) : q)) } : e,
       ),
     }));
   }
@@ -222,23 +274,29 @@ function Revisao({ onContinuar }: { onContinuar: () => void }) {
           </span>
         )}
       </p>
-      <div className="mt-6">
-        <RotuloExemplo>Os dados abaixo são do candidato de demonstração, não do arquivo enviado.</RotuloExemplo>
-      </div>
+      {exemplo && (
+        <div className="mt-6">
+          <RotuloExemplo>Os dados abaixo são do candidato de demonstração.</RotuloExemplo>
+        </div>
+      )}
 
       <dl className="mt-12 grid gap-x-8 gap-y-2 sm:grid-cols-[9rem_1fr] sm:gap-y-6">
-        <Linha rotulo="Nome" campo={cv.nome} onChange={(valor) => setCv({ ...cv, nome: { valor } })} grande />
-        <Linha rotulo="Título" campo={cv.titulo} onChange={(valor) => setCv({ ...cv, titulo: { valor } })} />
-        <Linha rotulo="Formação" campo={cv.formacao} onChange={(valor) => setCv({ ...cv, formacao: { valor } })} />
-        <Linha rotulo="Idiomas" campo={cv.idiomas} onChange={(valor) => setCv({ ...cv, idiomas: { valor } })} />
-        <dt className="mt-6 pt-1 text-rotulo text-cinza-quente sm:mt-0">Skills</dt>
-        <dd className="flex flex-wrap gap-2">
-          {cv.skills.map((s) => (
-            <span key={s} className="rounded-[3px] border border-fio px-2.5 py-1 text-sm">
-              {s}
-            </span>
-          ))}
-        </dd>
+        <Linha rotulo="Nome" campo={cv.nome} onChange={(v) => setCv({ ...cv, nome: corrigido(v) })} grande />
+        <Linha rotulo="Título" campo={cv.titulo} onChange={(v) => setCv({ ...cv, titulo: corrigido(v) })} />
+        <Linha rotulo="Formação" campo={cv.formacao} onChange={(v) => setCv({ ...cv, formacao: corrigido(v) })} />
+        <Linha rotulo="Idiomas" campo={cv.idiomas} onChange={(v) => setCv({ ...cv, idiomas: corrigido(v) })} />
+        {cv.skills.length > 0 && (
+          <>
+            <dt className="mt-6 pt-1 text-rotulo text-cinza-quente sm:mt-0">Skills</dt>
+            <dd className="flex flex-wrap gap-2">
+              {cv.skills.map((s) => (
+                <span key={s} className="rounded-[3px] border border-fio px-2.5 py-1 text-sm">
+                  {s}
+                </span>
+              ))}
+            </dd>
+          </>
+        )}
       </dl>
 
       <h2 className="mt-16 text-rotulo text-cinza-quente">Experiências</h2>
@@ -265,7 +323,7 @@ function Revisao({ onContinuar }: { onContinuar: () => void }) {
       </ol>
 
       <div className="mt-12">
-        <BotaoPrimario onClick={onContinuar}>Está certo, seguir para a vaga</BotaoPrimario>
+        <BotaoPrimario onClick={() => onConfirmar(cv)}>Está certo, seguir para a vaga</BotaoPrimario>
       </div>
     </section>
   );
@@ -278,7 +336,7 @@ function Linha({
   grande = false,
 }: {
   rotulo: string;
-  campo: CampoExtraido;
+  campo: CampoCv;
   onChange: (valor: string) => void;
   grande?: boolean;
 }) {
@@ -298,7 +356,7 @@ function Destaque({
   onChange,
   forte = false,
 }: {
-  campo: CampoExtraido;
+  campo: CampoCv;
   rotulo: string;
   onChange: (valor: string) => void;
   forte?: boolean;
@@ -310,6 +368,7 @@ function Destaque({
         valor={campo.valor}
         onChange={onChange}
         linhaUnica
+        placeholder="Vazio"
         className={forte ? "text-lg font-medium" : undefined}
       />
       {campo.baixaConfianca && <p className="text-rotulo text-ambar">Confira: lido com pouca certeza.</p>}

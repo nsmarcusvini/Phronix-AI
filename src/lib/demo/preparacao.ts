@@ -1,42 +1,37 @@
-import type { Nivel } from "@/lib/domain";
+import type { CurriculoExtraido, Diagnostico, VagaExtraida } from "@/lib/ai/esquemas";
 
-// Exemplo rotulado do wizard e da Conversa enquanto a IA não está ligada.
-// Mesmo candidato fictício do kit de demonstração (pleno, back-end).
-// Empresas e nomes são inventados. Nunca usar como copy de produto.
+// Exemplo rotulado do wizard e da Conversa (caminho "usar exemplo").
+// Mesmo candidato fictício do kit de demonstração (pleno, back-end), no mesmo
+// formato da extração real. Empresas e nomes são inventados.
 
-export type CampoExtraido = { valor: string; baixaConfianca?: boolean };
+const c = (valor: string, baixaConfianca = false) => ({ valor, baixaConfianca });
 
-export type Experiencia = {
-  empresa: CampoExtraido;
-  cargo: CampoExtraido;
-  periodo: CampoExtraido;
-  conquistas: CampoExtraido[];
-};
-
-export const curriculoExemplo = {
-  nome: { valor: "Alex Souza" } as CampoExtraido,
-  titulo: { valor: "Desenvolvedor back-end" } as CampoExtraido,
+export const curriculoExemplo: CurriculoExtraido = {
+  nome: c("Alex Souza"),
+  titulo: c("Desenvolvedor back-end"),
   experiencias: [
     {
-      empresa: { valor: "Loja Exemplo" },
-      cargo: { valor: "Desenvolvedor back-end pleno" },
-      periodo: { valor: "mar/2022 – atual" },
+      empresa: c("Loja Exemplo"),
+      cargo: c("Desenvolvedor back-end pleno"),
+      periodo: c("mar/2022 – atual"),
       conquistas: [
-        { valor: "Reduzi o p95 da API de pedidos de 1,8 s para 0,8 s antes da Black Friday." },
-        { valor: "Tirei o envio de e-mails do checkout com uma fila e retry." },
-        { valor: "Conduzi o teste de carga que evitou reescrever o módulo de frete." },
+        c("Reduzi o p95 da API de pedidos de 1,8 s para 0,8 s antes da Black Friday."),
+        c("Tirei o envio de e-mails do checkout com uma fila e retry."),
+        c("Conduzi o teste de carga que evitou reescrever o módulo de frete."),
       ],
     },
     {
-      empresa: { valor: "Agência Exemplo" },
-      cargo: { valor: "Desenvolvedor júnior" },
-      periodo: { valor: "2021 – 2022", baixaConfianca: true },
-      conquistas: [{ valor: "Mantive APIs de sites de clientes em Node.js." }],
+      empresa: c("Agência Exemplo"),
+      cargo: c("Desenvolvedor júnior"),
+      periodo: c("2021 – 2022", true),
+      conquistas: [c("Mantive APIs de sites de clientes em Node.js.")],
     },
-  ] as Experiencia[],
-  formacao: { valor: "Análise e Desenvolvimento de Sistemas" } as CampoExtraido,
+  ],
+  formacao: c("Análise e Desenvolvimento de Sistemas"),
   skills: ["Node.js", "TypeScript", "PostgreSQL", "Redis", "Docker", "Filas"],
-  idiomas: { valor: "Inglês intermediário", baixaConfianca: true } as CampoExtraido,
+  idiomas: c("Inglês intermediário", true),
+  certificacoes: [],
+  ilegivel: false,
 };
 
 export const vagaExemplo = {
@@ -63,17 +58,20 @@ Diferenciais:
 Buscamos alguém com autonomia, boa comunicação com áreas de negócio e vontade de aprender.`,
 };
 
-export const vagaExtraida = {
+export const vagaExtraida: VagaExtraida = {
   cargo: "Pessoa Desenvolvedora Back-end",
-  nivelPedido: { de: "pleno" as Nivel, ate: "senior" as Nivel, texto: "Pleno a sênior" },
+  nivelPedido: { de: "pleno", ate: "senior", texto: "Pleno a sênior" },
   obrigatorios: ["Node.js em produção", "PostgreSQL e performance", "Filas e eventos", "Observabilidade"],
   diferenciais: ["Kubernetes", "Eventos de alto tráfego"],
+  responsabilidades: [],
   comportamentais: ["Autonomia", "Comunicação com negócio", "Vontade de aprender"],
+  palavrasChave: [],
+  sinaisCultura: [],
 };
 
-export const diagnosticoExemplo = {
-  nivel: "pleno" as Nivel,
-  confianca: "alta" as const,
+export const diagnosticoExemplo: Diagnostico = {
+  nivel: "pleno",
+  confianca: "alta",
   justificativa: [
     {
       texto: "Resolve sozinho problemas de performance do time, com resultado medido.",

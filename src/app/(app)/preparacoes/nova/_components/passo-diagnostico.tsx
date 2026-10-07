@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import type { Diagnostico, VagaExtraida } from "@/lib/ai/esquemas";
 import type { Nivel } from "@/lib/domain";
 import { NOME_NIVEL } from "@/lib/hora-do-show/categorias";
-import { diagnosticoExemplo as d, vagaExtraida } from "@/lib/demo/preparacao";
-import { BotaoPrimario, RotuloExemplo } from "./comum";
+import { diagnosticoExemplo, vagaExtraida } from "@/lib/demo/preparacao";
+import { BotaoPrimario, Processando, RotuloExemplo } from "./comum";
 import { PortaoLogin } from "./portao-login";
 
 const NIVEIS: Nivel[] = ["junior", "pleno", "senior"];
@@ -15,19 +16,73 @@ function titulo(nivel: Nivel) {
 }
 const POSICAO: Record<Nivel, number> = { junior: 0, pleno: 50, senior: 100 };
 
+type Props = {
+  logado: boolean;
+  onEntrou: () => void;
+  onContinuar: () => void;
+  // Diagnóstico real (null enquanto carrega ou no caminho de exemplo).
+  diagnostico: Diagnostico | null;
+  carregando: boolean;
+  erro: string | null;
+  exemplo: boolean;
+  pedido: VagaExtraida["nivelPedido"];
+  onNivel: (nivel: Nivel, ajustado: boolean) => void;
+  onTentarDeNovo: () => void;
+};
+
 export function PassoDiagnostico({
   logado,
   onEntrou,
   onContinuar,
-}: {
-  logado: boolean;
-  onEntrou: () => void;
-  onContinuar: () => void;
-}) {
+  diagnostico,
+  carregando,
+  erro,
+  exemplo,
+  pedido,
+  onNivel,
+  onTentarDeNovo,
+}: Props) {
   const [semConta, setSemConta] = useState(false);
   const liberado = logado || semConta;
-  const [nivel, setNivel] = useState<Nivel>(d.nivel);
-  const ajustado = nivel !== d.nivel;
+  // Sem conta ou com dados de exemplo, mostra o diagnóstico de demonstração.
+  const demonstracao = exemplo || semConta || !logado;
+  const d = demonstracao ? diagnosticoExemplo : diagnostico;
+  const regua = demonstracao ? vagaExtraida.nivelPedido : pedido;
+  const [escolhido, setEscolhido] = useState<Nivel | null>(null);
+
+  if (liberado && !demonstracao && (carregando || erro || !d)) {
+    return (
+      <section aria-labelledby="titulo-diagnostico-carregando">
+        <h1 id="titulo-diagnostico-carregando" className="font-display text-display-lg font-medium">
+          {erro ? "O diagnóstico não saiu." : "Comparando você com a vaga"}
+        </h1>
+        <div className="mt-10">
+          {erro ? (
+            <div className="space-y-6">
+              <p role="alert" className="text-ambar">
+                {erro}
+              </p>
+              <BotaoPrimario onClick={onTentarDeNovo}>Tentar de novo</BotaoPrimario>
+            </div>
+          ) : (
+            <Processando
+              etapas={["Lendo escopo, autonomia e impacto", "Comparando com o nível pedido", "Montando a estratégia"]}
+              duracao={9000}
+            />
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  const base = d ?? diagnosticoExemplo;
+  const nivel = escolhido ?? base.nivel;
+  const ajustado = nivel !== base.nivel;
+
+  function escolher(n: Nivel) {
+    setEscolhido(n);
+    onNivel(n, n !== base.nivel);
+  }
 
   return (
     <section aria-labelledby="titulo-diagnostico" className="relative">
@@ -49,16 +104,16 @@ export function PassoDiagnostico({
           Você está no nível {NOME_NIVEL[nivel]}.
         </h1>
         <p className="mt-3 text-cinza-quente">
-          Confiança {d.confianca}
+          Confiança {base.confianca}
           {ajustado && <span className="text-osso"> · ajustado por você</span>}
         </p>
-        {liberado && (
+        {liberado && demonstracao && (
           <div className="mt-6">
             <RotuloExemplo>Este diagnóstico é do candidato de demonstração.</RotuloExemplo>
           </div>
         )}
 
-        <ReguaSenioridade nivel={nivel} />
+        <ReguaSenioridade nivel={nivel} pedido={regua} />
 
         <div className="mt-8 flex flex-wrap items-center gap-3 text-sm">
           <span className="text-cinza-quente">Não concorda? Ajuste:</span>
@@ -69,7 +124,7 @@ export function PassoDiagnostico({
                 type="button"
                 role="radio"
                 aria-checked={nivel === n}
-                onClick={() => setNivel(n)}
+                onClick={() => escolher(n)}
                 className={`rounded-[2px] px-3 py-1.5 transition-colors duration-150 ${
                   nivel === n ? "bg-osso text-noite" : "text-cinza-quente hover:text-osso"
                 }`}
@@ -82,7 +137,7 @@ export function PassoDiagnostico({
 
         <h2 className="mt-14 text-rotulo text-cinza-quente">Por quê</h2>
         <ul className="mt-4 space-y-5">
-          {d.justificativa.map((j) => (
+          {base.justificativa.map((j) => (
             <li key={j.trecho} className="grid gap-1 sm:grid-cols-[1fr_1fr] sm:gap-8">
               <p>{j.texto}</p>
               <p className="text-sm text-cinza-quente">
@@ -99,19 +154,19 @@ export function PassoDiagnostico({
           <div>
             <p className="text-rotulo text-cinza-quente">Match com a vaga</p>
             <p className="mt-1 font-display text-display-xl font-semibold tabular-nums">
-              {d.match}
+              {base.match}
               <span className="ml-1 align-top text-display-lg text-cinza-quente">/100</span>
             </p>
           </div>
           <div className="grid gap-8 sm:grid-cols-2 sm:self-end">
-            <Lista titulo="Pontos fortes" itens={d.fortes} />
-            <Lista titulo="Lacunas" itens={d.lacunas} suave />
+            <Lista titulo="Pontos fortes" itens={base.fortes} />
+            <Lista titulo="Lacunas" itens={base.lacunas} suave />
           </div>
         </div>
 
         <div className="mt-14 border-l border-osso/40 pl-5">
           <p className="text-rotulo text-cinza-quente">Estratégia</p>
-          <p className="mt-2 max-w-prose text-lg text-pretty">{d.estrategia}</p>
+          <p className="mt-2 max-w-prose text-lg text-pretty">{base.estrategia}</p>
         </div>
 
         <div className="mt-12">
@@ -124,11 +179,19 @@ export function PassoDiagnostico({
 
 // O momento do diagnóstico: o ponto do candidato e a faixa que a vaga pede,
 // na mesma régua. A distância entre os dois é a estratégia.
-export function ReguaSenioridade({ nivel, className = "mt-12" }: { nivel: Nivel; className?: string }) {
-  const { de, ate } = vagaExtraida.nivelPedido;
+export function ReguaSenioridade({
+  nivel,
+  pedido = vagaExtraida.nivelPedido,
+  className = "mt-12",
+}: {
+  nivel: Nivel;
+  pedido?: VagaExtraida["nivelPedido"];
+  className?: string;
+}) {
+  const { de, ate } = pedido;
 
   return (
-    <div className={`${className} max-w-xl`} aria-label={`Você: ${NOME_NIVEL[nivel]}. A vaga pede ${vagaExtraida.nivelPedido.texto}.`}>
+    <div className={`${className} max-w-xl`} aria-label={`Você: ${NOME_NIVEL[nivel]}. A vaga pede ${pedido.texto}.`}>
       <div aria-hidden className="relative h-6">
         <span
           className="absolute -top-1 h-2 border-x border-t border-cinza-quente"

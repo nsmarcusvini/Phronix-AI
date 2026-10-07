@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { vagaExemplo, vagaExtraida } from "@/lib/demo/preparacao";
+import type { VagaExtraida } from "@/lib/ai/esquemas";
 import type { EntradaVaga } from "@/lib/preparacao/salvar";
 import { BotaoPrimario, Processando, RotuloExemplo } from "./comum";
 
@@ -11,11 +12,15 @@ type Fase = "colar" | "lendo" | "entendida";
 
 export function PassoVaga({
   onEntrada,
+  onExtraida,
   onContinuar,
 }: {
   onEntrada: (entrada: EntradaVaga) => void;
+  onExtraida: (vaga: VagaExtraida, exemplo: boolean) => void;
   onContinuar: () => void;
 }) {
+  const [lida, setLida] = useState<{ vaga: VagaExtraida; exemplo: boolean } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const [fase, setFase] = useState<Fase>("colar");
   const [texto, setTexto] = useState("");
   const [empresa, setEmpresa] = useState("");
@@ -24,6 +29,28 @@ export function PassoVaga({
   const [tentou, setTentou] = useState(false);
 
   const curta = texto.trim().length < MINIMO_CARACTERES;
+
+  async function ler(exemplo: boolean) {
+    setErro(null);
+    setFase("lendo");
+    if (exemplo) {
+      setLida({ vaga: vagaExtraida, exemplo: true });
+      return;
+    }
+    const resposta = await fetch("/api/ia/vaga", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto: texto.trim() }),
+    }).catch(() => null);
+    const corpo = await resposta?.json().catch(() => null);
+    if (!resposta?.ok || !corpo?.vaga) {
+      setErro(corpo?.erro ?? "Não deu para ler a vaga agora. Tente de novo.");
+      setFase("colar");
+      return;
+    }
+    setLida({ vaga: corpo.vaga as VagaExtraida, exemplo: false });
+    setFase("entendida");
+  }
 
   if (fase === "lendo") {
     return (
@@ -34,44 +61,54 @@ export function PassoVaga({
         <div className="mt-10">
           <Processando
             etapas={["Separando requisitos e diferenciais", "Identificando o nível pedido", "Procurando sinais de cultura"]}
-            onFim={() => setFase("entendida")}
-            duracao={1400}
+            onFim={lida?.exemplo ? () => setFase("entendida") : undefined}
+            duracao={lida?.exemplo ? 1400 : 5000}
           />
         </div>
       </section>
     );
   }
 
-  if (fase === "entendida") {
+  if (fase === "entendida" && lida) {
+    const { vaga, exemplo } = lida;
     return (
       <section aria-labelledby="titulo-entendida" className="animate-revelar">
         <p className="text-rotulo text-cinza-quente">O que entendemos da vaga</p>
         <h1 id="titulo-entendida" className="mt-2 font-display text-display-lg font-medium text-balance">
-          {vagaExtraida.cargo}
+          {vaga.cargo}
         </h1>
         <p className="mt-3 text-cinza-quente">
-          Nível pedido: <span className="text-osso">{vagaExtraida.nivelPedido.texto}</span>
+          Nível pedido: <span className="text-osso">{vaga.nivelPedido.texto}</span>
           {data && (
             <>
               {" · "}Entrevista em <span className="text-osso tabular-nums">{data.split("-").reverse().join("/")}</span>
             </>
           )}
         </p>
-        <div className="mt-6">
-          <RotuloExemplo>A leitura abaixo é da vaga de demonstração.</RotuloExemplo>
-        </div>
+        {exemplo && (
+          <div className="mt-6">
+            <RotuloExemplo>A leitura abaixo é da vaga de demonstração.</RotuloExemplo>
+          </div>
+        )}
 
         <dl className="mt-12 space-y-8">
-          <Grupo titulo="Obrigatórios" itens={vagaExtraida.obrigatorios} forte />
-          <Grupo titulo="Diferenciais" itens={vagaExtraida.diferenciais} />
-          <Grupo titulo="Comportamento" itens={vagaExtraida.comportamentais} />
+          <Grupo titulo="Obrigatórios" itens={vaga.obrigatorios} forte />
+          {vaga.diferenciais.length > 0 && <Grupo titulo="Diferenciais" itens={vaga.diferenciais} />}
+          {vaga.comportamentais.length > 0 && <Grupo titulo="Comportamento" itens={vaga.comportamentais} />}
         </dl>
 
         <p className="mt-12 max-w-prose text-cinza-quente">
           Cada requisito vira uma pergunta a cobrir com um case seu na conversa.
         </p>
         <div className="mt-8">
-          <BotaoPrimario onClick={onContinuar}>Ver meu diagnóstico</BotaoPrimario>
+          <BotaoPrimario
+            onClick={() => {
+              onExtraida(vaga, exemplo);
+              onContinuar();
+            }}
+          >
+            Ver meu diagnóstico
+          </BotaoPrimario>
         </div>
       </section>
     );
@@ -92,8 +129,9 @@ export function PassoVaga({
           e.preventDefault();
           setTentou(true);
           if (curta) return;
-          onEntrada({ texto: texto.trim(), empresa, cargo, data, exemplo: texto === vagaExemplo.texto });
-          setFase("lendo");
+          const exemplo = texto === vagaExemplo.texto;
+          onEntrada({ texto: texto.trim(), empresa, cargo, data, exemplo });
+          void ler(exemplo);
         }}
       >
         <label className="block">
@@ -125,6 +163,11 @@ export function PassoVaga({
           Com a data, a prática se organiza até o dia da entrevista.
         </p>
 
+        {erro && (
+          <p role="alert" className="text-sm text-ambar">
+            {erro}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-2">
           <BotaoPrimario type="submit">Ler a vaga</BotaoPrimario>
           <button

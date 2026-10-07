@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Rótulo honesto do exemplo: enquanto a IA não está ligada, os resultados
 // vêm do candidato de demonstração, não do que a pessoa enviou.
@@ -13,29 +13,35 @@ export function RotuloExemplo({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Processamento em etapas legíveis, em vez de um spinner mudo.
+// Processamento em etapas legíveis, em vez de um spinner mudo. Sem onFim, as
+// etapas avançam e a última fica pulsando até o pai trocar de fase (resposta real).
 export function Processando({
   etapas,
   onFim,
   duracao = 1800,
 }: {
   etapas: string[];
-  onFim: () => void;
+  onFim?: () => void;
   duracao?: number;
 }) {
   const [feitas, setFeitas] = useState(0);
+  const fim = useRef(onFim);
+
+  useEffect(() => {
+    fim.current = onFim;
+  });
 
   useEffect(() => {
     const passo = duracao / etapas.length;
-    const ids = etapas.map((_, i) => setTimeout(() => setFeitas(i + 1), passo * (i + 1)));
-    const fim = setTimeout(onFim, duracao + 250);
+    // Sem onFim, a última etapa nunca é marcada como feita: espera a resposta.
+    const total = fim.current ? etapas.length : etapas.length - 1;
+    const ids = Array.from({ length: total }, (_, i) => setTimeout(() => setFeitas(i + 1), passo * (i + 1)));
+    const encerrar = fim.current ? setTimeout(() => fim.current?.(), duracao + 250) : undefined;
     return () => {
       ids.forEach(clearTimeout);
-      clearTimeout(fim);
+      clearTimeout(encerrar);
     };
-    // Roda uma vez por montagem.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [duracao, etapas.length]);
 
   return (
     <ol className="space-y-3" role="status" aria-live="polite">

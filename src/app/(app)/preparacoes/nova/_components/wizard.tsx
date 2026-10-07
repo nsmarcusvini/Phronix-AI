@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import type { TipoEntrevista } from "@/lib/domain";
+import { useEffect, useRef, useState } from "react";
+import type { CurriculoExtraido, Diagnostico, VagaExtraida } from "@/lib/ai/esquemas";
+import { vagaExtraida as vagaExemplo } from "@/lib/demo/preparacao";
+import type { Nivel, TipoEntrevista } from "@/lib/domain";
 import {
   criarKit,
   podeSalvar,
@@ -21,18 +23,32 @@ import { PassoVaga } from "./passo-vaga";
 const PASSOS = ["Currículo", "Vaga", "Diagnóstico", "Entrevista"];
 
 type Gravacao = { estado: "parado" | "salvando" | "salvo" | "exemplo" | "erro"; salvo?: Salvo };
+type EstadoDiagnostico = { dados: Diagnostico | null; carregando: boolean; erro: string | null };
 
-// Nova preparação em 4 passos. O login só aparece no diagnóstico:
-// o primeiro valor vem antes da conta. Depois do login, currículo e vaga
-// vão para a conta; o kit nasce quando o tipo de entrevista é escolhido.
+// O que cada passo produziu. Fica em ref para ler o valor mais recente no
+// mesmo clique em que o passo grava e avança.
+type Producao = {
+  curriculo: EntradaCurriculo | null;
+  vaga: EntradaVaga | null;
+  cv: { dados: CurriculoExtraido; exemplo: boolean } | null;
+  vagaLida: { dados: VagaExtraida; exemplo: boolean } | null;
+};
+
+// Nova preparação em 4 passos. O login só aparece no diagnóstico: o primeiro
+// valor vem antes da conta. Depois do login, currículo e vaga vão para a conta
+// e o diagnóstico é pedido à IA; o kit nasce quando o tipo é escolhido.
 export function Wizard() {
   const router = useRouter();
   const [passo, setPasso] = useState(0);
-  const [curriculo, setCurriculo] = useState<EntradaCurriculo | null>(null);
-  const [vaga, setVaga] = useState<EntradaVaga | null>(null);
+  const producao = useRef<Producao>({ curriculo: null, vaga: null, cv: null, vagaLida: null });
+  const [pedido, setPedido] = useState(vagaExemplo.nivelPedido);
   const [logado, setLogado] = useState(false);
   const [gravacao, setGravacao] = useState<Gravacao>({ estado: "parado" });
+  const [diagnostico, setDiagnostico] = useState<EstadoDiagnostico>({ dados: null, carregando: false, erro: null });
+  const [nivelEscolhido, setNivelEscolhido] = useState<{ nivel: Nivel; ajustado: boolean } | null>(null);
   const [criandoKit, setCriandoKit] = useState(false);
+  // Algum passo usou o exemplo rotulado: o diagnóstico também é de exemplo.
+  const [comExemplo, setComExemplo] = useState(false);
 
   useEffect(() => {
     createClient()
@@ -41,26 +57,54 @@ export function Wizard() {
       .catch(() => setLogado(false));
   }, []);
 
+  const usandoExemplo = () => Boolean(producao.current.cv?.exemplo || producao.current.vagaLida?.exemplo);
+
   function avancar() {
     const proximo = Math.min(PASSOS.length - 1, passo + 1);
     setPasso(proximo);
     window.scrollTo({ top: 0 });
-    // Chegou no diagnóstico já com sessão: salva sem pedir login.
-    if (proximo === 2 && logado && gravacao.estado === "parado") void salvar();
+    // Chegou no diagnóstico já com sessão: salva e diagnostica sem pedir login.
+    if (proximo === 2 && logado) depoisDoLogin();
+  }
+
+  function depoisDoLogin() {
+    if (gravacao.estado === "parado") void salvar();
+    if (!diagnostico.dados && !diagnostico.carregando) void diagnosticar();
   }
 
   async function salvar() {
-    if (!podeSalvar(curriculo, vaga) || curriculo?.tipo === "exemplo" || !curriculo || !vaga) {
+    const { curriculo, vaga, cv, vagaLida } = producao.current;
+    if (!podeSalvar(curriculo, vaga) || !curriculo || curriculo.tipo === "exemplo" || !vaga) {
       setGravacao({ estado: "exemplo" });
       return;
     }
     setGravacao({ estado: "salvando" });
     try {
-      const salvo = await salvarEntradas(createClient(), curriculo, vaga);
+      const salvo = await salvarEntradas(createClient(), curriculo, vaga, {
+        curriculo: cv?.dados ?? null,
+        vaga: vagaLida?.dados ?? null,
+      });
       setGravacao({ estado: "salvo", salvo });
     } catch {
       setGravacao({ estado: "erro" });
     }
+  }
+
+  async function diagnosticar() {
+    const { cv, vagaLida } = producao.current;
+    if (!cv || !vagaLida || usandoExemplo()) return;
+    setDiagnostico({ dados: null, carregando: true, erro: null });
+    const resposta = await fetch("/api/ia/diagnostico", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ curriculo: cv.dados, vaga: vagaLida.dados }),
+    }).catch(() => null);
+    const corpo = await resposta?.json().catch(() => null);
+    if (!resposta?.ok || !corpo?.diagnostico) {
+      setDiagnostico({ dados: null, carregando: false, erro: corpo?.erro ?? "Não deu para gerar o diagnóstico agora." });
+      return;
+    }
+    setDiagnostico({ dados: corpo.diagnostico as Diagnostico, carregando: false, erro: null });
   }
 
   async function comecarConversa(tipo: TipoEntrevista) {
@@ -70,7 +114,14 @@ export function Wizard() {
     }
     setCriandoKit(true);
     try {
-      const kitId = await criarKit(createClient(), gravacao.salvo, tipo);
+      const diag = diagnostico.dados
+        ? {
+            diagnostico: diagnostico.dados,
+            nivel: nivelEscolhido?.nivel ?? diagnostico.dados.nivel,
+            ajustado: nivelEscolhido?.ajustado ?? false,
+          }
+        : null;
+      const kitId = await criarKit(createClient(), gravacao.salvo, tipo, diag);
       router.push(`/kits/${kitId}/conversa?tipo=${tipo}`);
     } catch {
       setCriandoKit(false);
@@ -95,16 +146,42 @@ export function Wizard() {
         <Passos atual={passo} onVoltar={(i) => setPasso(i)} />
 
         <div className="mt-14 max-w-3xl">
-          {passo === 0 && <PassoCurriculo onEntrada={setCurriculo} onContinuar={avancar} />}
-          {passo === 1 && <PassoVaga onEntrada={setVaga} onContinuar={avancar} />}
+          {passo === 0 && (
+            <PassoCurriculo
+              onEntrada={(e) => (producao.current.curriculo = e)}
+              onConfirmado={(dados, exemplo) => {
+                producao.current.cv = { dados, exemplo };
+                setComExemplo(exemplo);
+              }}
+              onContinuar={avancar}
+            />
+          )}
+          {passo === 1 && (
+            <PassoVaga
+              onEntrada={(e) => (producao.current.vaga = e)}
+              onExtraida={(dados, exemplo) => {
+                producao.current.vagaLida = { dados, exemplo };
+                setPedido(dados.nivelPedido);
+                if (exemplo) setComExemplo(true);
+              }}
+              onContinuar={avancar}
+            />
+          )}
           {passo === 2 && (
             <PassoDiagnostico
               logado={logado}
               onEntrou={() => {
                 setLogado(true);
-                void salvar();
+                depoisDoLogin();
               }}
               onContinuar={avancar}
+              diagnostico={diagnostico.dados}
+              carregando={diagnostico.carregando}
+              erro={diagnostico.erro}
+              exemplo={comExemplo}
+              pedido={pedido}
+              onNivel={(nivel, ajustado) => setNivelEscolhido({ nivel, ajustado })}
+              onTentarDeNovo={() => void diagnosticar()}
             />
           )}
           {passo === 3 && <PassoTipo onComecar={comecarConversa} ocupado={criandoKit} />}
