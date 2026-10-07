@@ -32,7 +32,11 @@ export function PortaoLogin({ onEntrou, onSemConta }: { onEntrou: () => void; on
       const supabase = createClient();
       const { data, error } =
         modo === "criar"
-          ? await supabase.auth.signUp({ email, password: senha })
+          ? await supabase.auth.signUp({
+              email,
+              password: senha,
+              options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/preparacoes/nova` },
+            })
           : await supabase.auth.signInWithPassword({ email, password: senha });
       if (error) {
         setErro(

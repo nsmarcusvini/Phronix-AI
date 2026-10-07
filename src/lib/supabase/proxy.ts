@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseKey, supabaseUrl } from "./env";
+import type { Database } from "./database.types";
 
 // O login só é pedido no diagnóstico: currículo e vaga (/preparacoes/nova)
 // ficam abertos. A Hora do Show também, porque roda do aparelho, e o kit de
@@ -24,7 +25,7 @@ export async function updateSession(request: NextRequest) {
 
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
