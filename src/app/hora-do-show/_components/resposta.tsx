@@ -1,4 +1,5 @@
 import type { QaItem } from "@/lib/domain";
+import { ComMarcadores } from "@/components/com-marcadores";
 
 type Props = {
   item: QaItem;
@@ -78,22 +79,5 @@ export function Resposta(props: Props) {
         </ul>
       )}
     </article>
-  );
-}
-
-// Dado que falta vira [confirmar: …], destacado em Âmbar até o usuário resolver.
-function ComMarcadores({ texto }: { texto: string }) {
-  const partes = texto.split(/(\[confirmar:[^\]]*\])/g);
-  return partes.map((parte, i) =>
-    parte.startsWith("[confirmar:") ? (
-      <mark
-        key={i}
-        className="bg-transparent text-ambar underline decoration-dotted underline-offset-4"
-      >
-        {parte}
-      </mark>
-    ) : (
-      parte
-    ),
   );
 }

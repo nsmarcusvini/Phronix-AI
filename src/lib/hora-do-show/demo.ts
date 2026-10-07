@@ -1,4 +1,4 @@
-import type { Categoria, Kit, QaItem } from "@/lib/domain";
+import type { Categoria, Kit, QaItem, Review } from "@/lib/domain";
 import { localDb } from "@/lib/local-db";
 
 // Kit de demonstração da Hora do Show (/hora-do-show/demo).
@@ -214,9 +214,50 @@ export const demoItens: QaItem[] = rascunhos.map((r, i) => ({
   updated_at: AGORA,
 }));
 
+// Caixa de cada resposta praticável no histórico de exemplo (null = nunca revisada).
+const CAIXAS_DEMO: (number | null)[] = [5, 4, 3, 5, 3, 2, 2, 4, 5, 2, null, null];
+
+function historicoDemo(agora: Date): Review[] {
+  const praticaveis = demoItens.filter((i) => i.gancho !== null);
+  return praticaveis.flatMap((item, i) => {
+    const caixa = CAIXAS_DEMO[i];
+    if (caixa == null) return [];
+    const revisado = new Date(agora);
+    revisado.setDate(revisado.getDate() - 1 - (i % 3));
+    revisado.setHours(20, 0, 0, 0);
+    // Palco e caixa 4 ainda não venceram; o resto venceu há 2 horas.
+    const horas = caixa >= 4 ? 30 : -2;
+    const proxima = new Date(agora.getTime() + horas * 3_600_000);
+    return [
+      {
+        id: `00000000-0000-4000-8000-0000000e${String(i + 1).padStart(4, "0")}`,
+        kit_id: DEMO_KIT_ID,
+        qa_item_id: item.id,
+        exercicio: "flashcard",
+        nota: "acertei",
+        caixa,
+        proxima_revisao: proxima.toISOString(),
+        revisado_em: revisado.toISOString(),
+      } satisfies Review,
+    ];
+  });
+}
+
+function emDias(dias: number) {
+  const data = new Date();
+  data.setDate(data.getDate() + dias);
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  return `${data.getFullYear()}-${mes}-${dia}`;
+}
+
+// Recria o kit a cada abertura (entrevista sempre daqui a 3 dias). O histórico
+// de exemplo só entra se ainda não houver revisões, para não apagar a prática real.
 export async function semearDemo() {
-  await localDb.transaction("rw", localDb.kits, localDb.qaItems, async () => {
-    await localDb.kits.put(demoKit);
+  await localDb.transaction("rw", localDb.kits, localDb.qaItems, localDb.reviews, async () => {
+    await localDb.kits.put({ ...demoKit, data_entrevista: emDias(3) });
     await localDb.qaItems.bulkPut(demoItens);
+    const existentes = await localDb.reviews.where("kit_id").equals(DEMO_KIT_ID).count();
+    if (existentes === 0) await localDb.reviews.bulkAdd(historicoDemo(new Date()));
   });
 }

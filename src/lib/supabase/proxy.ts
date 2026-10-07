@@ -3,8 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabaseKey, supabaseUrl } from "./env";
 
 // O login só é pedido no diagnóstico: currículo e vaga (/preparacoes/nova)
-// ficam abertos. A Hora do Show também, porque roda do aparelho.
+// ficam abertos. A Hora do Show também, porque roda do aparelho, e o kit de
+// demonstração (/kits/demo/...), que vive só no navegador.
 function isProtected(pathname: string) {
+  if (pathname.startsWith("/kits/demo/")) return false;
   return (
     pathname === "/preparacoes" ||
     pathname.startsWith("/kits/") ||
