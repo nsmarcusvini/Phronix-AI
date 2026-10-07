@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* Paleta Brasa. Proporção: ~70% Noite/Grafite, ~25% Osso, até 5% Fênix.
+   Âmbar e Menta são funcionais (estado), nunca decoração.
+   Botão primário: fundo Fênix com texto Noite (branco sobre Fênix reprova no AA). */
+:root {
+  --noite: #0c0c0e;
+  --grafite: #17171a;
+  --fio: #2b2b30;
+  --osso: #f2efe8;
+  --cinza-quente: #9c978d;
+  --fenix: #ff5a1f;
+  --ambar: #ffc14d;
+  --menta: #3ddc97;
+  --palco: #000000;
+}
+
+@theme inline {
+  --color-noite: var(--noite);
+  --color-grafite: var(--grafite);
+  --color-fio: var(--fio);
+  --color-osso: var(--osso);
+  --color-cinza-quente: var(--cinza-quente);
+  --color-fenix: var(--fenix);
+  --color-ambar: var(--ambar);
+  --color-menta: var(--menta);
+  --color-palco: var(--palco);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--noite);
+  color: var(--osso);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fenix);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
