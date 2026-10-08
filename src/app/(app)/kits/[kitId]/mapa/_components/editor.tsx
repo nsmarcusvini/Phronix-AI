@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { QaItem } from "@/lib/domain";
 import { CATEGORIAS } from "@/lib/hora-do-show/categorias";
 import { contarPalavras, fala, pendenciasDeConfirmacao } from "@/lib/mapa/fala";
@@ -14,8 +14,16 @@ const NOME_CATEGORIA = new Map(CATEGORIAS.map((c) => [c.id, c.nome]));
 const ROTULO_CASE = ["Contexto", "O que eu fiz", "Resultado"];
 const ROTULO_PONTO = ["Ponto 1", "Ponto 2", "Ponto 3"];
 const CATEGORIAS_CASE = new Set(["experiencia_cases", "perguntas_dificeis"]);
-const ACOES = ["Mais curto", "Mais natural", "Mais técnico", "Regerar"];
+const ACOES = [
+  { id: "curto", nome: "Mais curto" },
+  { id: "natural", nome: "Mais natural" },
+  { id: "tecnico", nome: "Mais técnico" },
+  { id: "regerar", nome: "Regerar" },
+] as const;
 const EXPANDIDA_MAXIMO = 120;
+
+type Acao = (typeof ACOES)[number]["id"];
+type Versao = Pick<QaItem, "gancho" | "bullets" | "ancoras" | "numero_impacto" | "expandida">;
 
 type Props = {
   item: QaItem;
@@ -23,10 +31,18 @@ type Props = {
   total: number;
   onAlterar: (alteracao: Partial<QaItem>) => void;
   onVoltar: () => void;
+  // No kit de demonstração não há conta, então a IA fica desligada.
+  demo?: boolean;
 };
 
-export function Editor({ item, posicao, total, onAlterar, onVoltar }: Props) {
-  const [avisoIa, setAvisoIa] = useState(false);
+export function Editor({ item, posicao, total, onAlterar, onVoltar, demo = false }: Props) {
+  const [reescrevendo, setReescrevendo] = useState<Acao | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [anterior, setAnterior] = useState<Versao | null>(null);
+  const pedido = useRef<AbortController | null>(null);
+
+  // Trocou de resposta (o editor remonta): a reescrita em andamento é descartada.
+  useEffect(() => () => pedido.current?.abort(), []);
   const temResposta = item.gancho !== null;
   const medida = fala(item);
   const pendencias = pendenciasDeConfirmacao(item);
@@ -44,6 +60,57 @@ export function Editor({ item, posicao, total, onAlterar, onVoltar }: Props) {
     while (ancoras.length <= i) ancoras.push("");
     ancoras[i] = valor;
     onAlterar({ ancoras });
+  }
+
+  async function reescrever(acao: Acao) {
+    if (reescrevendo) return;
+    if (demo) {
+      setAviso("No kit de demonstração a reescrita fica desligada. Edite direto no texto.");
+      return;
+    }
+    const versao: Versao = {
+      gancho: item.gancho,
+      bullets: item.bullets,
+      ancoras: item.ancoras,
+      numero_impacto: item.numero_impacto,
+      expandida: item.expandida,
+    };
+    const controle = new AbortController();
+    pedido.current = controle;
+    setReescrevendo(acao);
+    setAviso(null);
+    const resposta = await fetch("/api/ia/reescrita", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kitId: item.kit_id, qaItemId: item.id, acao, atual: { ...versao, gancho: item.gancho ?? "" } }),
+      signal: controle.signal,
+    }).catch(() => null);
+    if (controle.signal.aborted) return;
+    const corpo = await resposta?.json().catch(() => null);
+    setReescrevendo(null);
+    if (!resposta?.ok || !corpo?.gancho) {
+      setAviso(
+        resposta
+          ? (corpo?.erro ?? "A reescrita não saiu agora. Tente de novo.")
+          : "Sem conexão. A reescrita precisa de internet.",
+      );
+      return;
+    }
+    setAnterior(versao);
+    onAlterar({
+      gancho: corpo.gancho,
+      bullets: corpo.bullets,
+      ancoras: corpo.ancoras,
+      numero_impacto: corpo.numero_impacto,
+      expandida: corpo.expandida,
+    });
+  }
+
+  function desfazer() {
+    if (!anterior) return;
+    onAlterar(anterior);
+    setAnterior(null);
+    setAviso(null);
   }
 
   return (
@@ -164,18 +231,34 @@ export function Editor({ item, posicao, total, onAlterar, onVoltar }: Props) {
             <div className="mt-3 flex flex-wrap gap-2">
               {ACOES.map((acao) => (
                 <button
-                  key={acao}
+                  key={acao.id}
                   type="button"
-                  aria-disabled
-                  onClick={() => setAvisoIa(true)}
-                  className="rounded-[3px] border border-fio px-3 py-1.5 text-sm text-cinza-quente hover:border-cinza-quente"
+                  disabled={reescrevendo !== null}
+                  aria-busy={reescrevendo === acao.id}
+                  onClick={() => reescrever(acao.id)}
+                  className={`rounded-[3px] border px-3 py-1.5 text-sm transition-colors duration-150 disabled:cursor-wait ${
+                    reescrevendo === acao.id
+                      ? "border-osso text-osso"
+                      : "border-fio text-cinza-quente enabled:hover:border-cinza-quente enabled:hover:text-osso disabled:opacity-50"
+                  }`}
                 >
-                  {acao}
+                  {acao.nome}
                 </button>
               ))}
+              {anterior && !reescrevendo && (
+                <button
+                  type="button"
+                  onClick={desfazer}
+                  className="px-1 py-1.5 text-sm text-cinza-quente underline-offset-4 hover:text-osso hover:underline"
+                >
+                  Desfazer
+                </button>
+              )}
             </div>
             <p className="mt-3 min-h-[1.4em] text-sm text-cinza-quente" aria-live="polite">
-              {avisoIa && "Em breve: as reescritas chegam junto com a IA. Por enquanto, edite direto no texto."}
+              {reescrevendo
+                ? "Reescrevendo só com os fatos que você já deu…"
+                : (aviso ?? (anterior ? "Nova versão aplicada. Revise antes de ensaiar." : ""))}
             </p>
           </div>
         </>

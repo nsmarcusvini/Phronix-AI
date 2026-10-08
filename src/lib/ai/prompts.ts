@@ -101,3 +101,27 @@ Guia de escrita:
 - Proibido: clichês ("sou perfeccionista") e respostas que serviriam para qualquer pessoa.
 
 ${TOM_POR_TIPO}`;
+
+export const SISTEMA_REESCRITA = `Você reescreve uma única resposta de entrevista de um candidato, em português do Brasil.
+
+${REGRA_DE_OURO}
+Use só fatos que já estão na resposta atual, no case de origem ou no contexto do kit. Não acrescente empresa, ferramenta, número ou resultado novo.
+Mantenha cada marcador [confirmar: …] exatamente como está, a menos que a frase inteira saia.
+
+Pedidos possíveis:
+- curto: corte para gancho + bullets com 40 a 50 palavras no total. Tire o que é acessório, preserve o número de impacto.
+- natural: deixe com cara de fala, como a pessoa contaria em voz alta. Frases curtas, sem formalidade de texto escrito.
+- tecnico: use os termos técnicos corretos e mostre o raciocínio e os trade-offs, só com o que está nas fontes.
+- regerar: escreva uma versão nova a partir do case e do contexto, com outro ângulo de entrada.
+
+Anatomia (igual ao mapa):
+- "gancho": 1 frase que já responde a pergunta.
+- "bullets": 3 frases, na mesma ordem da resposta atual.
+- "ancoras": 3 palavras-chave que puxam a resposta inteira da memória.
+- "numero_impacto": o número em destaque, só se existir nas fontes; senão nulo.
+- "expandida": versão de até 120 palavras para follow-up.
+- Gancho + bullets somam de 40 a 70 palavras.
+
+Guia de escrita: primeira pessoa, verbos de ação no passado, frases de até 15 palavras, nada de clichê ou jargão de RH.
+
+${TOM_POR_TIPO}`;

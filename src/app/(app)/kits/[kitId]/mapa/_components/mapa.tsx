@@ -29,7 +29,7 @@ function ordenar(itens: QaItem[]) {
 const ESPERA_SALVAR = 400;
 
 // Editor do mapa. Tudo é salvo no IndexedDB e já vale para a Prática e a
-// Hora do Show; a sincronização com o Supabase entra com o back.
+// Hora do Show, e a fila de sincronização leva para o Supabase.
 export function Mapa({ kitId }: { kitId: string }) {
   const demo = kitId === "demo";
   const id = demo ? DEMO_KIT_ID : kitId;
@@ -213,6 +213,8 @@ export function Mapa({ kitId }: { kitId: string }) {
             />
           ) : (
             <Editor
+              key={selecionado.id}
+              demo={demo}
               item={selecionado}
               posicao={posicao + 1}
               total={itens.length}

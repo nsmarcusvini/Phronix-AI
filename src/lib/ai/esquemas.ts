@@ -105,3 +105,16 @@ export const mapaGerado = z.object({
   ),
 });
 export type MapaGerado = z.infer<typeof mapaGerado>;
+
+// Reescrita de uma resposta do mapa pelos botões do editor.
+export const acaoReescrita = z.enum(["curto", "natural", "tecnico", "regerar"]);
+export type AcaoReescrita = z.infer<typeof acaoReescrita>;
+
+export const respostaReescrita = z.object({
+  gancho: z.string(),
+  bullets: z.array(z.string()),
+  ancoras: z.array(z.string()),
+  numero_impacto: z.string().nullable(),
+  expandida: z.string().nullable(),
+});
+export type RespostaReescrita = z.infer<typeof respostaReescrita>;
