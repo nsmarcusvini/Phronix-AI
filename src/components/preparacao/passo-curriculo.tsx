@@ -115,8 +115,8 @@ export function PassoCurriculo({
         Comece pelo seu currículo.
       </h1>
       <p className="mt-4 max-w-prose text-cinza-quente">
-        Ele vira a base de todas as suas preparações. Você confere os dados em um minuto e depois cadastra as
-        vagas no painel.
+        Ele vira a base de todas as suas preparações. Você confere os dados em um minuto e depois cadastra as vagas no
+        painel.
       </p>
 
       <div className="mt-10">
@@ -212,7 +212,15 @@ export function PassoCurriculo({
   );
 }
 
-// Revisão de 1 minuto: tudo editável, baixa confiança em Âmbar até ser corrigida.
+// Revisão de 1 minuto. Tudo é editável e a tela diz isso sem precisar de
+// hover: texto com sublinhado tracejado e lápis, rótulo em cada campo,
+// experiências e conquistas que dá para adicionar e remover. O que a IA leu
+// com pouca certeza fica em Âmbar até a pessoa corrigir ou confirmar.
+type Experiencia = CurriculoExtraido["experiencias"][number];
+
+let proximaChave = 0;
+const novaChave = () => `k${proximaChave++}`;
+
 function Revisao({
   inicial,
   salvando,
@@ -225,6 +233,9 @@ function Revisao({
   onConfirmar: (cv: CurriculoExtraido) => void;
 }) {
   const [cv, setCv] = useState(inicial);
+  // Chaves estáveis para a lista sobreviver a remoções sem trocar o campo em edição.
+  const [chaves, setChaves] = useState(() => inicial.experiencias.map(novaChave));
+  const [skill, setSkill] = useState("");
   const corrigido = (valor: string): CampoCv => ({ valor, baixaConfianca: false });
   const duvidas =
     [cv.nome, cv.titulo, cv.formacao, cv.idiomas].filter((c) => c.baixaConfianca).length +
@@ -233,89 +244,258 @@ function Revisao({
       0,
     );
 
-  function atualizarExperiencia(i: number, chave: "empresa" | "cargo" | "periodo", valor: string) {
-    setCv((c) => ({
-      ...c,
-      experiencias: c.experiencias.map((e, k) => (k === i ? { ...e, [chave]: corrigido(valor) } : e)),
-    }));
+  function experiencia(i: number, mudar: (e: Experiencia) => Experiencia) {
+    setCv((c) => ({ ...c, experiencias: c.experiencias.map((e, k) => (k === i ? mudar(e) : e)) }));
   }
 
-  function atualizarConquista(i: number, j: number, valor: string) {
+  function adicionarExperiencia() {
+    const vazio = corrigido("");
     setCv((c) => ({
       ...c,
-      experiencias: c.experiencias.map((e, k) =>
-        k === i ? { ...e, conquistas: e.conquistas.map((q, m) => (m === j ? corrigido(valor) : q)) } : e,
-      ),
+      experiencias: [...c.experiencias, { cargo: vazio, empresa: vazio, periodo: vazio, conquistas: [vazio] }],
     }));
+    setChaves((k) => [...k, novaChave()]);
+  }
+
+  function removerExperiencia(i: number) {
+    setCv((c) => ({ ...c, experiencias: c.experiencias.filter((_, k) => k !== i) }));
+    setChaves((k) => k.filter((_, j) => j !== i));
+  }
+
+  function adicionarSkill() {
+    const nova = skill.trim();
+    if (nova && !cv.skills.includes(nova)) setCv((c) => ({ ...c, skills: [...c.skills, nova] }));
+    setSkill("");
+  }
+
+  function irParaDuvida() {
+    const alvo = document.querySelector<HTMLElement>("[data-duvida] button");
+    alvo?.scrollIntoView({ block: "center", behavior: "smooth" });
+    alvo?.focus({ preventScroll: true });
   }
 
   return (
-    <section aria-labelledby="titulo-revisao" className="animate-revelar">
-      <h1 id="titulo-revisao" className="font-display text-display-lg font-medium">
-        Confira em um minuto.
-      </h1>
-      <p className="mt-4 max-w-prose text-cinza-quente">
-        Clique em qualquer campo para corrigir.{" "}
+    <>
+      <section aria-labelledby="titulo-revisao" className="animate-revelar pb-28">
+        <h1 id="titulo-revisao" className="font-display text-display-lg font-medium">
+          Confira em um minuto.
+        </h1>
+        <p className="mt-4 max-w-prose text-cinza-quente">
+          A IA leu seu currículo. <span className="text-osso">Tudo aqui é editável</span>: toque em qualquer texto
+          sublinhado para corrigir, e adicione o que ficou de fora.
+        </p>
         {duvidas > 0 && (
-          <span className="text-ambar">
-            {duvidas === 1 ? "1 campo pede atenção." : `${duvidas} campos pedem atenção.`}
-          </span>
+          <button
+            type="button"
+            onClick={irParaDuvida}
+            className="mt-5 flex items-center gap-2 text-sm text-ambar underline-offset-4 hover:underline"
+          >
+            <span aria-hidden className="size-1.5 rounded-full bg-ambar" />
+            {duvidas === 1 ? "1 campo pede atenção" : `${duvidas} campos pedem atenção`} · ir para o próximo
+          </button>
         )}
-      </p>
 
-      <dl className="mt-12 grid gap-x-8 gap-y-2 sm:grid-cols-[9rem_1fr] sm:gap-y-6">
-        <Linha rotulo="Nome" campo={cv.nome} onChange={(v) => setCv({ ...cv, nome: corrigido(v) })} grande />
-        <Linha rotulo="Título" campo={cv.titulo} onChange={(v) => setCv({ ...cv, titulo: corrigido(v) })} />
-        <Linha rotulo="Formação" campo={cv.formacao} onChange={(v) => setCv({ ...cv, formacao: corrigido(v) })} />
-        <Linha rotulo="Idiomas" campo={cv.idiomas} onChange={(v) => setCv({ ...cv, idiomas: corrigido(v) })} />
-        {cv.skills.length > 0 && (
-          <>
-            <dt className="mt-6 pt-1 text-rotulo text-cinza-quente sm:mt-0">Skills</dt>
-            <dd className="flex flex-wrap gap-2">
+        <h2 className="mt-14 text-rotulo text-cinza-quente">Você</h2>
+        <dl className="mt-4 grid gap-x-8 gap-y-2 border-t border-fio pt-6 sm:grid-cols-[9rem_1fr] sm:gap-y-5">
+          <Linha
+            rotulo="Nome"
+            campo={cv.nome}
+            onChange={(v) => setCv({ ...cv, nome: corrigido(v) })}
+            onConfirmar={() => setCv({ ...cv, nome: corrigido(cv.nome.valor) })}
+            grande
+          />
+          <Linha
+            rotulo="Título"
+            campo={cv.titulo}
+            onChange={(v) => setCv({ ...cv, titulo: corrigido(v) })}
+            onConfirmar={() => setCv({ ...cv, titulo: corrigido(cv.titulo.valor) })}
+          />
+          <Linha
+            rotulo="Formação"
+            campo={cv.formacao}
+            onChange={(v) => setCv({ ...cv, formacao: corrigido(v) })}
+            onConfirmar={() => setCv({ ...cv, formacao: corrigido(cv.formacao.valor) })}
+          />
+          <Linha
+            rotulo="Idiomas"
+            campo={cv.idiomas}
+            onChange={(v) => setCv({ ...cv, idiomas: corrigido(v) })}
+            onConfirmar={() => setCv({ ...cv, idiomas: corrigido(cv.idiomas.valor) })}
+          />
+
+          <dt className="mt-6 pt-1 text-rotulo text-cinza-quente sm:mt-0">Skills</dt>
+          <dd>
+            <ul className="flex flex-wrap gap-2">
               {cv.skills.map((s) => (
-                <span key={s} className="rounded-[3px] border border-fio px-2.5 py-1 text-sm">
-                  {s}
-                </span>
-              ))}
-            </dd>
-          </>
-        )}
-      </dl>
-
-      <h2 className="mt-16 text-rotulo text-cinza-quente">Experiências</h2>
-      <ol className="mt-4 divide-y divide-fio border-y border-fio">
-        {cv.experiencias.map((e, i) => (
-          <li key={i} className="py-6">
-            <div className="grid gap-x-6 gap-y-1 sm:grid-cols-[1fr_1fr_10rem]">
-              <Destaque campo={e.cargo} rotulo="cargo" onChange={(v) => atualizarExperiencia(i, "cargo", v)} forte />
-              <Destaque campo={e.empresa} rotulo="empresa" onChange={(v) => atualizarExperiencia(i, "empresa", v)} />
-              <Destaque campo={e.periodo} rotulo="período" onChange={(v) => atualizarExperiencia(i, "periodo", v)} />
-            </div>
-            <ul className="mt-4 space-y-1">
-              {e.conquistas.map((q, j) => (
-                <li key={j} className="flex gap-3">
-                  <span aria-hidden className="mt-[0.9em] h-px w-3 shrink-0 bg-fio" />
-                  <div className="flex-1">
-                    <Destaque campo={q} rotulo="conquista" onChange={(v) => atualizarConquista(i, j, v)} />
-                  </div>
+                <li key={s} className="flex items-center rounded-[3px] border border-fio text-sm">
+                  <span className="py-1 pl-2.5">{s}</span>
+                  <button
+                    type="button"
+                    onClick={() => setCv((c) => ({ ...c, skills: c.skills.filter((x) => x !== s) }))}
+                    className="px-2 py-1 text-cinza-quente hover:text-osso"
+                  >
+                    <span aria-hidden>×</span>
+                    <span className="sr-only">Remover {s}</span>
+                  </button>
                 </li>
               ))}
+              <li>
+                <input
+                  value={skill}
+                  onChange={(e) => setSkill(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      adicionarSkill();
+                    }
+                  }}
+                  onBlur={adicionarSkill}
+                  placeholder="+ skill"
+                  aria-label="Adicionar skill"
+                  className="w-28 rounded-[3px] border border-dashed border-fio bg-transparent px-2.5 py-1 text-sm text-osso placeholder:text-cinza-quente focus:w-44 focus:border-cinza-quente focus:outline-none"
+                />
+              </li>
             </ul>
-          </li>
-        ))}
-      </ol>
+          </dd>
+        </dl>
 
-      <div className="mt-12">
-        {erro && (
-          <p role="alert" className="mb-4 text-sm text-ambar">
-            {erro}
-          </p>
-        )}
-        <BotaoPrimario disabled={salvando} onClick={() => onConfirmar(cv)}>
-          {salvando ? "Salvando…" : "Está certo, ir para o painel"}
-        </BotaoPrimario>
+        <div className="mt-16 flex items-baseline justify-between gap-4">
+          <h2 className="text-rotulo text-cinza-quente">
+            Experiências <span className="tabular-nums">· {cv.experiencias.length}</span>
+          </h2>
+        </div>
+        <ol className="mt-4 space-y-4">
+          {cv.experiencias.map((e, i) => (
+            <li key={chaves[i]} className="rounded-[3px] border border-fio p-5 sm:p-6">
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="text-rotulo tabular-nums text-cinza-quente">{String(i + 1).padStart(2, "0")}</span>
+                <button
+                  type="button"
+                  onClick={() => removerExperiencia(i)}
+                  className="text-rotulo text-cinza-quente underline-offset-4 hover:text-osso hover:underline"
+                >
+                  Remover experiência
+                </button>
+              </div>
+
+              <div className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-[1fr_1fr_11rem]">
+                <Rotulado rotulo="Cargo">
+                  <Destaque
+                    campo={e.cargo}
+                    rotulo="cargo"
+                    placeholder="Adicionar cargo"
+                    forte
+                    onChange={(v) => experiencia(i, (x) => ({ ...x, cargo: corrigido(v) }))}
+                    onConfirmar={() => experiencia(i, (x) => ({ ...x, cargo: corrigido(x.cargo.valor) }))}
+                  />
+                </Rotulado>
+                <Rotulado rotulo="Empresa">
+                  <Destaque
+                    campo={e.empresa}
+                    rotulo="empresa"
+                    placeholder="Adicionar empresa"
+                    onChange={(v) => experiencia(i, (x) => ({ ...x, empresa: corrigido(v) }))}
+                    onConfirmar={() => experiencia(i, (x) => ({ ...x, empresa: corrigido(x.empresa.valor) }))}
+                  />
+                </Rotulado>
+                <Rotulado rotulo="Período">
+                  <Destaque
+                    campo={e.periodo}
+                    rotulo="período"
+                    placeholder="Adicionar período"
+                    onChange={(v) => experiencia(i, (x) => ({ ...x, periodo: corrigido(v) }))}
+                    onConfirmar={() => experiencia(i, (x) => ({ ...x, periodo: corrigido(x.periodo.valor) }))}
+                  />
+                </Rotulado>
+              </div>
+
+              <p className="mt-6 text-rotulo text-cinza-quente">Conquistas</p>
+              <ul className="mt-2 space-y-1">
+                {e.conquistas.map((q, j) => (
+                  <li key={j} className="group/conquista flex items-start gap-3">
+                    <span aria-hidden className="mt-[1.05em] h-px w-3 shrink-0 bg-fio" />
+                    <div className="min-w-0 flex-1">
+                      <Destaque
+                        campo={q}
+                        rotulo="conquista"
+                        placeholder="Descreva o que você fez e o resultado"
+                        multilinha
+                        onChange={(v) =>
+                          experiencia(i, (x) => ({
+                            ...x,
+                            conquistas: x.conquistas.map((c, m) => (m === j ? corrigido(v) : c)),
+                          }))
+                        }
+                        onConfirmar={() =>
+                          experiencia(i, (x) => ({
+                            ...x,
+                            conquistas: x.conquistas.map((c, m) => (m === j ? corrigido(c.valor) : c)),
+                          }))
+                        }
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        experiencia(i, (x) => ({ ...x, conquistas: x.conquistas.filter((_, m) => m !== j) }))
+                      }
+                      className="mt-1 shrink-0 px-1.5 py-0.5 text-cinza-quente hover:text-osso sm:opacity-0 sm:group-hover/conquista:opacity-100 sm:focus-visible:opacity-100"
+                    >
+                      <span aria-hidden>×</span>
+                      <span className="sr-only">Remover conquista</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() => experiencia(i, (x) => ({ ...x, conquistas: [...x.conquistas, corrigido("")] }))}
+                className="mt-3 text-sm text-cinza-quente underline-offset-4 hover:text-osso hover:underline"
+              >
+                + Adicionar conquista
+              </button>
+            </li>
+          ))}
+        </ol>
+        <button
+          type="button"
+          onClick={adicionarExperiencia}
+          className="mt-4 w-full rounded-[3px] border border-dashed border-fio px-5 py-4 text-left text-cinza-quente transition-colors duration-150 hover:border-cinza-quente hover:text-osso"
+        >
+          + Adicionar experiência
+        </button>
+      </section>
+
+      {/* A ação fica sempre à mão, mesmo no fim de uma lista longa. Fora da
+          seção animada: o transform da animação prenderia o fixed nela. */}
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-fio bg-noite/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-8">
+          <div className="flex max-w-3xl flex-1 flex-wrap items-center justify-between gap-x-6 gap-y-2">
+            <p role="status" className={`text-sm ${duvidas ? "text-ambar" : "text-cinza-quente"}`}>
+              {erro ? (
+                <span className="text-ambar">{erro}</span>
+              ) : duvidas ? (
+                `${duvidas} para conferir`
+              ) : (
+                "Tudo conferido"
+              )}
+            </p>
+            <BotaoPrimario disabled={salvando} onClick={() => onConfirmar(cv)}>
+              {salvando ? "Salvando…" : "Está certo, ir para o painel"}
+            </BotaoPrimario>
+          </div>
+        </div>
       </div>
-    </section>
+    </>
+  );
+}
+
+function Rotulado({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-rotulo text-cinza-quente">{rotulo}</p>
+      <div className="mt-1">{children}</div>
+    </div>
   );
 }
 
@@ -323,18 +503,27 @@ function Linha({
   rotulo,
   campo,
   onChange,
+  onConfirmar,
   grande = false,
 }: {
   rotulo: string;
   campo: CampoCv;
   onChange: (valor: string) => void;
+  onConfirmar: () => void;
   grande?: boolean;
 }) {
   return (
     <>
       <dt className="mt-6 pt-1 text-rotulo text-cinza-quente first:mt-0 sm:mt-0">{rotulo}</dt>
       <dd>
-        <Destaque campo={campo} rotulo={rotulo} onChange={onChange} forte={grande} />
+        <Destaque
+          campo={campo}
+          rotulo={rotulo}
+          onChange={onChange}
+          onConfirmar={onConfirmar}
+          forte={grande}
+          placeholder={`Adicionar ${rotulo.toLowerCase()}`}
+        />
       </dd>
     </>
   );
@@ -344,24 +533,41 @@ function Destaque({
   campo,
   rotulo,
   onChange,
+  onConfirmar,
+  placeholder,
   forte = false,
+  multilinha = false,
 }: {
   campo: CampoCv;
   rotulo: string;
   onChange: (valor: string) => void;
+  onConfirmar: () => void;
+  placeholder: string;
   forte?: boolean;
+  multilinha?: boolean;
 }) {
   return (
-    <div className={campo.baixaConfianca ? "border-l border-ambar pl-3" : undefined}>
+    <div
+      data-duvida={campo.baixaConfianca || undefined}
+      className={campo.baixaConfianca ? "border-l-2 border-ambar pl-3" : undefined}
+    >
       <Campo
         rotulo={rotulo}
         valor={campo.valor}
         onChange={onChange}
-        linhaUnica
-        placeholder="Vazio"
+        linhaUnica={!multilinha}
+        placeholder={placeholder}
+        indicarEdicao
         className={forte ? "text-lg font-medium" : undefined}
       />
-      {campo.baixaConfianca && <p className="text-rotulo text-ambar">Confira: lido com pouca certeza.</p>}
+      {campo.baixaConfianca && (
+        <p className="mt-1 flex flex-wrap items-baseline gap-x-3 text-rotulo text-ambar">
+          Lido com pouca certeza.
+          <button type="button" onClick={onConfirmar} className="text-osso underline underline-offset-4">
+            Está certo
+          </button>
+        </p>
+      )}
     </div>
   );
 }
