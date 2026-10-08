@@ -9,6 +9,7 @@ import { Processando } from "@/components/preparacao/comum";
 import { CartaoCase, type CaseVisivel } from "./cartao-case";
 import { Cobertura, META_COBERTURA } from "./cobertura";
 import { useDitado } from "./use-ditado";
+import { novoId } from "@/lib/id";
 
 type Mensagem = { id: string; papel: "ia" | "voce"; texto: string };
 
@@ -45,7 +46,7 @@ export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, cases
   async function enviar(texto: string | null) {
     if (ocupado) return;
     setErro(null);
-    if (texto) setMensagens((m) => [...m, { id: crypto.randomUUID(), papel: "voce", texto }]);
+    if (texto) setMensagens((m) => [...m, { id: novoId(), papel: "voce", texto }]);
     setRascunho("");
     setEscrevendo("");
 
@@ -82,7 +83,7 @@ export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, cases
           }
         }
       }
-      if (acumulado.trim()) setMensagens((m) => [...m, { id: crypto.randomUUID(), papel: "ia", texto: acumulado }]);
+      if (acumulado.trim()) setMensagens((m) => [...m, { id: novoId(), papel: "ia", texto: acumulado }]);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "A conversa travou agora. Tente mandar de novo.");
     } finally {

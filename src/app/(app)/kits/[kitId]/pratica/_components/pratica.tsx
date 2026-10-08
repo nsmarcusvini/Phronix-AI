@@ -20,6 +20,7 @@ import {
 import { Fim } from "./fim";
 import { Hoje } from "./hoje";
 import { Sessao, type ItemDaFila, type Resultado } from "./sessao";
+import { novoId } from "@/lib/id";
 
 type Dados = { kit: Kit; itens: QaItem[]; reviews: Review[]; agora: Date };
 
@@ -86,7 +87,7 @@ export function Pratica({ kitId }: { kitId: string }) {
   async function registrar({ estado, exercicio }: ItemDaFila, nota: Nota) {
     const agora = new Date();
     const caixa = aplicarNota(estado.caixa, nota);
-    const reviewId = crypto.randomUUID();
+    const reviewId = novoId();
     await localDb.reviews.add({
       id: reviewId,
       kit_id: id,
