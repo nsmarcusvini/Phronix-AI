@@ -3,9 +3,8 @@
 import { useRef, useState } from "react";
 import { Campo } from "@/components/campo-inline";
 import type { CurriculoExtraido } from "@/lib/ai/esquemas";
-import { curriculoExemplo } from "@/lib/demo/preparacao";
 import type { EntradaCurriculo } from "@/lib/preparacao/salvar";
-import { BotaoPrimario, Processando, RotuloExemplo } from "./comum";
+import { BotaoPrimario, Processando } from "./comum";
 
 const LIMITE_BYTES = 5 * 1024 * 1024;
 const TIPOS = {
@@ -18,14 +17,15 @@ type CampoCv = { valor: string; baixaConfianca: boolean };
 
 const ETAPAS = ["Lendo o arquivo", "Separando experiências", "Procurando números e conquistas", "Conferindo datas"];
 
+// Onboarding: o currículo é lido, revisado e vira a base de todas as vagas.
 export function PassoCurriculo({
-  onEntrada,
   onConfirmado,
-  onContinuar,
+  salvando = false,
+  erroSalvar = null,
 }: {
-  onEntrada: (entrada: EntradaCurriculo) => void;
-  onConfirmado: (curriculo: CurriculoExtraido, exemplo: boolean) => void;
-  onContinuar: () => void;
+  onConfirmado: (curriculo: CurriculoExtraido, entrada: EntradaCurriculo) => void;
+  salvando?: boolean;
+  erroSalvar?: string | null;
 }) {
   const [fase, setFase] = useState<Fase>("enviar");
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -34,7 +34,7 @@ export function PassoCurriculo({
   const [consentimento, setConsentimento] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [arrastando, setArrastando] = useState(false);
-  const [extraido, setExtraido] = useState<{ cv: CurriculoExtraido; exemplo: boolean } | null>(null);
+  const [extraido, setExtraido] = useState<{ cv: CurriculoExtraido; entrada: EntradaCurriculo } | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
 
   function escolher(f: File | undefined) {
@@ -53,11 +53,12 @@ export function PassoCurriculo({
 
   async function ler() {
     const dados = new FormData();
+    let lida: EntradaCurriculo;
     if (modoColar) {
-      onEntrada({ tipo: "texto", texto: colado.trim() });
+      lida = { tipo: "texto", texto: colado.trim() };
       dados.set("texto", colado.trim());
     } else if (arquivo) {
-      onEntrada({ tipo: "arquivo", arquivo });
+      lida = { tipo: "arquivo", arquivo };
       dados.set("arquivo", arquivo);
     } else return;
 
@@ -78,15 +79,8 @@ export function PassoCurriculo({
       setFase("enviar");
       return;
     }
-    setExtraido({ cv, exemplo: false });
+    setExtraido({ cv, entrada: lida });
     setFase("revisar");
-  }
-
-  function usarExemplo() {
-    setConsentimento(true);
-    onEntrada({ tipo: "exemplo" });
-    setExtraido({ cv: curriculoExemplo, exemplo: true });
-    setFase("extraindo");
   }
 
   const pronto = consentimento && (modoColar ? colado.trim().length > 200 : arquivo !== null);
@@ -98,11 +92,7 @@ export function PassoCurriculo({
           Lendo seu currículo
         </h1>
         <div className="mt-10">
-          {extraido?.exemplo ? (
-            <Processando etapas={ETAPAS} onFim={() => setFase("revisar")} />
-          ) : (
-            <Processando etapas={ETAPAS} duracao={6000} />
-          )}
+          <Processando etapas={ETAPAS} duracao={6000} />
         </div>
       </section>
     );
@@ -112,11 +102,9 @@ export function PassoCurriculo({
     return (
       <Revisao
         inicial={extraido.cv}
-        exemplo={extraido.exemplo}
-        onConfirmar={(cv) => {
-          onConfirmado(cv, extraido.exemplo);
-          onContinuar();
-        }}
+        salvando={salvando}
+        erro={erroSalvar}
+        onConfirmar={(cv) => onConfirmado(cv, extraido.entrada)}
       />
     );
   }
@@ -127,7 +115,8 @@ export function PassoCurriculo({
         Comece pelo seu currículo.
       </h1>
       <p className="mt-4 max-w-prose text-cinza-quente">
-        Ele vira dados que você confere em um minuto. Depois vem a vaga.
+        Ele vira a base de todas as suas preparações. Você confere os dados em um minuto e depois cadastra as
+        vagas no painel.
       </p>
 
       <div className="mt-10">
@@ -209,18 +198,15 @@ export function PassoCurriculo({
           className="mt-0.5 size-4 shrink-0 accent-osso"
         />
         <span className="text-cinza-quente">
-          <span className="text-osso">Autorizo o uso do meu currículo para montar esta preparação.</span> O arquivo é
+          <span className="text-osso">Autorizo o uso do meu currículo para montar minhas preparações.</span> O arquivo é
           apagado depois da leitura; ficam só os dados que você revisar.
         </span>
       </label>
 
-      <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+      <div className="mt-10">
         <BotaoPrimario disabled={!pronto} onClick={() => void ler()}>
           Ler currículo
         </BotaoPrimario>
-        <button type="button" onClick={usarExemplo} className="text-sm text-osso underline-offset-4 hover:underline">
-          Usar currículo de exemplo
-        </button>
       </div>
     </section>
   );
@@ -229,11 +215,13 @@ export function PassoCurriculo({
 // Revisão de 1 minuto: tudo editável, baixa confiança em Âmbar até ser corrigida.
 function Revisao({
   inicial,
-  exemplo,
+  salvando,
+  erro,
   onConfirmar,
 }: {
   inicial: CurriculoExtraido;
-  exemplo: boolean;
+  salvando: boolean;
+  erro: string | null;
   onConfirmar: (cv: CurriculoExtraido) => void;
 }) {
   const [cv, setCv] = useState(inicial);
@@ -274,11 +262,6 @@ function Revisao({
           </span>
         )}
       </p>
-      {exemplo && (
-        <div className="mt-6">
-          <RotuloExemplo>Os dados abaixo são do candidato de demonstração.</RotuloExemplo>
-        </div>
-      )}
 
       <dl className="mt-12 grid gap-x-8 gap-y-2 sm:grid-cols-[9rem_1fr] sm:gap-y-6">
         <Linha rotulo="Nome" campo={cv.nome} onChange={(v) => setCv({ ...cv, nome: corrigido(v) })} grande />
@@ -323,7 +306,14 @@ function Revisao({
       </ol>
 
       <div className="mt-12">
-        <BotaoPrimario onClick={() => onConfirmar(cv)}>Está certo, seguir para a vaga</BotaoPrimario>
+        {erro && (
+          <p role="alert" className="mb-4 text-sm text-ambar">
+            {erro}
+          </p>
+        )}
+        <BotaoPrimario disabled={salvando} onClick={() => onConfirmar(cv)}>
+          {salvando ? "Salvando…" : "Está certo, ir para o painel"}
+        </BotaoPrimario>
       </div>
     </section>
   );

@@ -35,14 +35,23 @@ const TIPOS: {
   },
 ];
 
+// Escolha do que preparar para a vaga. Tipos que a vaga já tem ficam
+// marcados e não podem ser criados de novo.
 export function PassoTipo({
   onComecar,
   ocupado = false,
+  inicial,
+  existentes = [],
 }: {
   onComecar: (tipo: TipoEntrevista) => void;
   ocupado?: boolean;
+  inicial?: TipoEntrevista;
+  existentes?: TipoEntrevista[];
 }) {
-  const [tipo, setTipo] = useState<TipoEntrevista>("tecnica");
+  const livres = TIPOS.filter((t) => !existentes.includes(t.id)).map((t) => t.id);
+  const [tipo, setTipo] = useState<TipoEntrevista>(
+    inicial && livres.includes(inicial) ? inicial : livres.includes("tecnica") ? "tecnica" : (livres[0] ?? "tecnica"),
+  );
 
   return (
     <section aria-labelledby="titulo-tipo">
@@ -57,14 +66,16 @@ export function PassoTipo({
       <div role="radiogroup" aria-labelledby="titulo-tipo" className="mt-12 border-t border-fio">
         {TIPOS.map((t, i) => {
           const escolhido = t.id === tipo;
+          const criado = existentes.includes(t.id);
           return (
             <button
               key={t.id}
               type="button"
               role="radio"
               aria-checked={escolhido}
+              disabled={criado}
               onClick={() => setTipo(t.id)}
-              className="group relative block w-full border-b border-fio py-6 text-left"
+              className="group relative block w-full border-b border-fio py-6 text-left disabled:cursor-not-allowed disabled:opacity-40"
             >
               {escolhido && <span aria-hidden className="absolute inset-y-6 -left-4 w-0.5 bg-fenix sm:-left-6" />}
               <span className="flex items-baseline gap-5">
@@ -77,7 +88,7 @@ export function PassoTipo({
                   {t.nome}
                 </span>
                 <span className="ml-auto hidden max-w-[22ch] text-right text-sm text-cinza-quente sm:block">
-                  {t.descobrir}
+                  {criado ? "Já criado para esta vaga" : t.descobrir}
                 </span>
               </span>
 
@@ -106,7 +117,7 @@ export function PassoTipo({
       </div>
 
       <div className="mt-12">
-        <BotaoPrimario disabled={ocupado} onClick={() => onComecar(tipo)}>
+        <BotaoPrimario disabled={ocupado || existentes.includes(tipo)} onClick={() => onComecar(tipo)}>
           {ocupado ? "Criando o kit…" : "Começar a conversa"}
         </BotaoPrimario>
       </div>

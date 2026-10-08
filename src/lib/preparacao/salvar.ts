@@ -3,87 +3,79 @@ import type { CurriculoExtraido, Diagnostico, VagaExtraida } from "@/lib/ai/esqu
 import type { Nivel, TipoEntrevista } from "@/lib/domain";
 import type { Database } from "@/lib/supabase/database.types";
 
-// Grava a preparação depois do login. Roda no navegador com a sessão da
-// pessoa: o RLS garante que tudo fica na conta dela.
+// Grava currículo, vaga e kit. Roda no navegador com a sessão da pessoa: o
+// RLS garante que tudo fica na conta dela.
 
 type Cliente = SupabaseClient<Database>;
 
-export type EntradaCurriculo =
-  | { tipo: "arquivo"; arquivo: File }
-  | { tipo: "texto"; texto: string }
-  | { tipo: "exemplo" };
+export type EntradaCurriculo = { tipo: "arquivo"; arquivo: File } | { tipo: "texto"; texto: string };
 
 export type EntradaVaga = {
   texto: string;
   empresa: string;
   cargo: string;
   data: string;
-  exemplo: boolean;
 };
 
-export type Salvo = { resumeId: string; jobId: string; dataEntrevista: string | null };
-
-// O exemplo rotulado nunca vai para a conta.
-export function podeSalvar(curriculo: EntradaCurriculo | null, vaga: EntradaVaga | null) {
-  return curriculo !== null && curriculo.tipo !== "exemplo" && vaga !== null && !vaga.exemplo;
-}
-
-export async function salvarEntradas(
-  supabase: Cliente,
-  curriculo: Exclude<EntradaCurriculo, { tipo: "exemplo" }>,
-  vaga: EntradaVaga,
-  extraidos: { curriculo: CurriculoExtraido | null; vaga: VagaExtraida | null },
-): Promise<Salvo> {
+async function usuario(supabase: Cliente) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Sem sessão");
+  return user;
+}
 
-  // O arquivo já foi lido pelo servidor na extração (/api/ia/curriculo) e não é
-  // guardado: ficam só os dados revisados (LGPD: apagar o arquivo após a leitura).
-  const arquivoPath: string | null = null;
-
-  const [consentimento, resume, job] = await Promise.all([
+// Onboarding: o currículo revisado vira a base de todas as vagas. O arquivo já
+// foi lido pelo servidor na extração (/api/ia/curriculo) e não é guardado:
+// ficam só os dados revisados (LGPD: apagar o arquivo após a leitura).
+export async function salvarCurriculo(supabase: Cliente, entrada: EntradaCurriculo, dados: CurriculoExtraido) {
+  const user = await usuario(supabase);
+  const [consentimento, resume] = await Promise.all([
     supabase.from("profiles").update({ consentimento_lgpd_em: new Date().toISOString() }).eq("id", user.id),
     supabase
       .from("resumes")
       .insert({
-        arquivo_path: arquivoPath,
-        texto: curriculo.tipo === "texto" ? curriculo.texto : null,
-        dados_json: extraidos.curriculo,
-      })
-      .select("id")
-      .single(),
-    supabase
-      .from("jobs")
-      .insert({
-        texto: vaga.texto,
-        empresa: vaga.empresa.trim() || null,
-        cargo: vaga.cargo.trim() || extraidos.vaga?.cargo || null,
-        dados_json: extraidos.vaga,
+        arquivo_path: null,
+        texto: entrada.tipo === "texto" ? entrada.texto : null,
+        dados_json: dados,
       })
       .select("id")
       .single(),
   ]);
-
-  const erro = consentimento.error ?? resume.error ?? job.error;
-  if (erro || !resume.data || !job.data) throw erro ?? new Error("Falha ao salvar");
-
-  return { resumeId: resume.data.id, jobId: job.data.id, dataEntrevista: vaga.data || null };
+  const erro = consentimento.error ?? resume.error;
+  if (erro || !resume.data) throw erro ?? new Error("Falha ao salvar o currículo");
+  return resume.data.id;
 }
 
+export async function salvarVaga(supabase: Cliente, vaga: EntradaVaga, dados: VagaExtraida) {
+  await usuario(supabase);
+  const { data, error } = await supabase
+    .from("jobs")
+    .insert({
+      texto: vaga.texto,
+      empresa: vaga.empresa.trim() || null,
+      cargo: vaga.cargo.trim() || dados.cargo || null,
+      dados_json: dados,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw error ?? new Error("Falha ao salvar a vaga");
+  return data.id;
+}
+
+export type BaseDoKit = { resumeId: string; jobId: string; dataEntrevista: string | null };
 export type DiagnosticoDoKit = { diagnostico: Diagnostico; nivel: Nivel; ajustado: boolean };
 
 // O insert só aceita as colunas liberadas pelo schema; o diagnóstico entra num
 // update logo em seguida (também liberado para o dono).
-export async function criarKit(supabase: Cliente, salvo: Salvo, tipo: TipoEntrevista, diag: DiagnosticoDoKit | null) {
+export async function criarKit(supabase: Cliente, base: BaseDoKit, tipo: TipoEntrevista, diag: DiagnosticoDoKit | null) {
   const { data, error } = await supabase
     .from("kits")
     .insert({
-      resume_id: salvo.resumeId,
-      job_id: salvo.jobId,
+      resume_id: base.resumeId,
+      job_id: base.jobId,
       tipo,
-      data_entrevista: salvo.dataEntrevista,
+      data_entrevista: base.dataEntrevista,
     })
     .select("id")
     .single();

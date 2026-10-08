@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { TipoEntrevista } from "@/lib/domain";
 import { NOME_TIPO } from "@/lib/hora-do-show/categorias";
 import { createClient } from "@/lib/supabase/client";
-import { Processando } from "@/app/(app)/preparacoes/nova/_components/comum";
+import { Processando } from "@/components/preparacao/comum";
 import { CartaoCase, type CaseVisivel } from "./cartao-case";
 import { Cobertura, META_COBERTURA } from "./cobertura";
 import { useDitado } from "./use-ditado";

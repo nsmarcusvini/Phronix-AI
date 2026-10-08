@@ -1,6 +1,6 @@
 import "server-only";
 
-// Limite simples por chave (IP ou usuário), em memória, por instância do servidor.
+// Limite simples por chave (usuário), em memória, por instância do servidor.
 // Basta para o beta; em produção com várias instâncias, trocar por um
 // armazenamento compartilhado (ex.: Upstash Redis).
 
@@ -16,8 +16,4 @@ export function dentroDoLimite(chave: string, maximo: number, janelaMs: number) 
   recentes.push(agora);
   janelas.set(chave, recentes);
   return true;
-}
-
-export function ipDe(request: Request) {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
 }

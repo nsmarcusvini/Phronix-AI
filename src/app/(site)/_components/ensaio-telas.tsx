@@ -1,4 +1,4 @@
-import { ReguaSenioridade } from "@/app/(app)/preparacoes/nova/_components/passo-diagnostico";
+import { ReguaSenioridade } from "@/components/preparacao/passo-diagnostico";
 import { Regua } from "@/app/(app)/kits/[kitId]/mapa/_components/regua";
 import { diagnosticoExemplo as d } from "@/lib/demo/preparacao";
 import { demoItens } from "@/lib/hora-do-show/demo";

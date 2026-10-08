@@ -2,17 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Rótulo honesto do exemplo: enquanto a IA não está ligada, os resultados
-// vêm do candidato de demonstração, não do que a pessoa enviou.
-export function RotuloExemplo({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="flex items-start gap-2 border-l border-ambar/60 pl-3 text-sm text-cinza-quente">
-      <span className="text-ambar">Exemplo.</span>
-      <span>{children}</span>
-    </p>
-  );
-}
-
 // Processamento em etapas legíveis, em vez de um spinner mudo. Sem onFim, as
 // etapas avançam e a última fica pulsando até o pai trocar de fase (resposta real).
 export function Processando({

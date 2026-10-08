@@ -4,9 +4,8 @@ import { useState } from "react";
 import type { Diagnostico, VagaExtraida } from "@/lib/ai/esquemas";
 import type { Nivel } from "@/lib/domain";
 import { NOME_NIVEL } from "@/lib/hora-do-show/categorias";
-import { diagnosticoExemplo, vagaExtraida } from "@/lib/demo/preparacao";
-import { BotaoPrimario, Processando, RotuloExemplo } from "./comum";
-import { PortaoLogin } from "./portao-login";
+import { vagaExtraida } from "@/lib/demo/preparacao";
+import { BotaoPrimario, Processando } from "./comum";
 
 const NIVEIS: Nivel[] = ["junior", "pleno", "senior"];
 
@@ -17,40 +16,28 @@ function titulo(nivel: Nivel) {
 const POSICAO: Record<Nivel, number> = { junior: 0, pleno: 50, senior: 100 };
 
 type Props = {
-  logado: boolean;
-  onEntrou: () => void;
   onContinuar: () => void;
-  // Diagnóstico real (null enquanto carrega ou no caminho de exemplo).
+  // Null enquanto carrega ou quando deu erro.
   diagnostico: Diagnostico | null;
   carregando: boolean;
   erro: string | null;
-  exemplo: boolean;
   pedido: VagaExtraida["nivelPedido"];
   onNivel: (nivel: Nivel, ajustado: boolean) => void;
   onTentarDeNovo: () => void;
 };
 
 export function PassoDiagnostico({
-  logado,
-  onEntrou,
   onContinuar,
   diagnostico,
   carregando,
   erro,
-  exemplo,
   pedido,
   onNivel,
   onTentarDeNovo,
 }: Props) {
-  const [semConta, setSemConta] = useState(false);
-  const liberado = logado || semConta;
-  // Sem conta ou com dados de exemplo, mostra o diagnóstico de demonstração.
-  const demonstracao = exemplo || semConta || !logado;
-  const d = demonstracao ? diagnosticoExemplo : diagnostico;
-  const regua = demonstracao ? vagaExtraida.nivelPedido : pedido;
   const [escolhido, setEscolhido] = useState<Nivel | null>(null);
 
-  if (liberado && !demonstracao && (carregando || erro || !d)) {
+  if (carregando || erro || !diagnostico) {
     return (
       <section aria-labelledby="titulo-diagnostico-carregando">
         <h1 id="titulo-diagnostico-carregando" className="font-display text-display-lg font-medium">
@@ -75,7 +62,7 @@ export function PassoDiagnostico({
     );
   }
 
-  const base = d ?? diagnosticoExemplo;
+  const base = diagnostico;
   const nivel = escolhido ?? base.nivel;
   const ajustado = nivel !== base.nivel;
 
@@ -85,20 +72,8 @@ export function PassoDiagnostico({
   }
 
   return (
-    <section aria-labelledby="titulo-diagnostico" className="relative">
-      {!liberado && (
-        <div className="absolute inset-x-0 top-0 z-20 flex justify-center pt-4 sm:pt-16">
-          <PortaoLogin onEntrou={onEntrou} onSemConta={() => setSemConta(true)} />
-        </div>
-      )}
-
-      <div
-        aria-hidden={!liberado}
-        inert={!liberado}
-        className={`transition-[filter,opacity] duration-700 ease-brasa ${
-          liberado ? "" : "pointer-events-none max-h-[46rem] overflow-hidden opacity-50 blur-md select-none"
-        }`}
-      >
+    <section aria-labelledby="titulo-diagnostico" className="animate-revelar">
+      <div>
         <p className="text-rotulo text-cinza-quente">Diagnóstico</p>
         <h1 id="titulo-diagnostico" className="mt-2 font-display text-display-lg font-medium text-balance">
           Você está no nível {NOME_NIVEL[nivel]}.
@@ -107,13 +82,7 @@ export function PassoDiagnostico({
           Confiança {base.confianca}
           {ajustado && <span className="text-osso"> · ajustado por você</span>}
         </p>
-        {liberado && demonstracao && (
-          <div className="mt-6">
-            <RotuloExemplo>Este diagnóstico é do candidato de demonstração.</RotuloExemplo>
-          </div>
-        )}
-
-        <ReguaSenioridade nivel={nivel} pedido={regua} />
+        <ReguaSenioridade nivel={nivel} pedido={pedido} />
 
         <div className="mt-8 flex flex-wrap items-center gap-3 text-sm">
           <span className="text-cinza-quente">Não concorda? Ajuste:</span>

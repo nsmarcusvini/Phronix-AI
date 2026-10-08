@@ -1,19 +1,24 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { destinoSeguro } from "@/lib/destino";
 import { supabaseKey, supabaseUrl } from "./env";
 import type { Database } from "./database.types";
 
-// O login só é pedido no diagnóstico: currículo e vaga (/preparacoes/nova)
-// ficam abertos. A Hora do Show também, porque roda do aparelho, e o kit de
+// A conta vem primeiro: onboarding (/comecar), painel, kits e conta pedem
+// login. Ficam abertos a landing, a Hora do Show (roda do aparelho) e o kit de
 // demonstração (/kits/demo/...), que vive só no navegador.
 function isProtected(pathname: string) {
   if (pathname.startsWith("/kits/demo/")) return false;
   return (
-    pathname === "/preparacoes" ||
+    pathname.startsWith("/comecar") ||
+    pathname.startsWith("/painel") ||
     pathname.startsWith("/kits/") ||
     pathname.startsWith("/conta")
   );
 }
+
+// Quem já entrou não precisa ver de novo as telas de entrar e criar conta.
+const SO_SEM_SESSAO = new Set(["/entrar", "/criar-conta"]);
 
 export async function updateSession(request: NextRequest) {
   if (!supabaseUrl || !supabaseKey) {
@@ -51,6 +56,16 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/entrar";
     url.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(url);
+  }
+
+  if (data?.claims && SO_SEM_SESSAO.has(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = destinoSeguro(request.nextUrl.searchParams.get("next"));
+    url.search = "";
+    const redirecionar = NextResponse.redirect(url);
+    // Leva junto os cookies da sessão renovada.
+    response.cookies.getAll().forEach((cookie) => redirecionar.cookies.set(cookie));
+    return redirecionar;
   }
 
   return response;

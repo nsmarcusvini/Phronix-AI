@@ -1,7 +1,7 @@
 import mammoth from "mammoth";
 import { NextResponse, type NextRequest } from "next/server";
 import { extrairCurriculo, type EntradaCurriculo } from "@/lib/ai/etapas";
-import { dentroDoLimite, ipDe } from "@/lib/ai/limite";
+import { dentroDoLimite } from "@/lib/ai/limite";
 import { muitasTentativas, respostaDeErro } from "@/lib/ai/respostas";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,10 +9,15 @@ const LIMITE_BYTES = 5 * 1024 * 1024;
 const PDF = "application/pdf";
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-// Etapa 1: extrair currículo (Haiku 4.5). Aberta antes do login, como pede o
-// PRD; protegida por limite por IP. PDF vai direto ao modelo; DOCX vira texto.
+// Etapa 1: extrair currículo (Haiku 4.5), no onboarding logo depois de criar a
+// conta. PDF vai direto ao modelo; DOCX vira texto.
 export async function POST(request: NextRequest) {
-  if (!dentroDoLimite(`curriculo:${ipDe(request)}`, 8, 10 * 60_000)) return muitasTentativas();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ erro: "Entre na sua conta para enviar o currículo." }, { status: 401 });
+  if (!dentroDoLimite(`curriculo:${user.id}`, 8, 10 * 60_000)) return muitasTentativas();
 
   const form = await request.formData().catch(() => null);
   if (!form) return NextResponse.json({ erro: "Envie o arquivo ou o texto do currículo." }, { status: 400 });
@@ -40,11 +45,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ erro: "Envie o arquivo ou cole o texto do currículo." }, { status: 400 });
   }
 
-  const supabase = await createClient().catch(() => null);
-  const userId = (await supabase?.auth.getUser())?.data.user?.id ?? null;
-
   try {
-    const curriculo = await extrairCurriculo(entrada, userId);
+    const curriculo = await extrairCurriculo(entrada, user.id);
     return NextResponse.json({ curriculo });
   } catch (erro) {
     return respostaDeErro(erro);

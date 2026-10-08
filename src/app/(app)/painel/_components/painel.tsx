@@ -2,7 +2,10 @@ import Link from "next/link";
 import type { TipoEntrevista } from "@/lib/domain";
 import { NOME_TIPO } from "@/lib/hora-do-show/categorias";
 import { entrevistaEm } from "@/lib/pratica/formatos";
+import type { CurriculoAtual } from "@/lib/preparacao/curriculo";
 import type { ResumoKit, ResumoVaga } from "@/lib/preparacao/listar";
+
+const NOVA_VAGA = "/painel/nova-vaga";
 
 const TIPOS: TipoEntrevista[] = ["rh", "tecnica", "lideranca"];
 const NOME_CURTO: Record<TipoEntrevista, string> = { rh: "RH", tecnica: "Técnica", lideranca: "Liderança" };
@@ -14,16 +17,24 @@ const STATUS: Record<ResumoKit["status"], string> = {
   pronto: "Mapa pronto",
 };
 
-// Minhas preparações, a partir do banco. A próxima entrevista ocupa o topo;
-// cada vaga mostra as três posições de kit (RH, Técnica, Liderança).
-export function Preparacoes({ vagas }: { vagas: ResumoVaga[] }) {
-  if (vagas.length === 0) return <Vazio />;
+// Painel: a casa da pessoa depois do onboarding. O currículo já está salvo;
+// aqui ela cadastra vagas e escolhe o que preparar para cada uma. A próxima
+// entrevista ocupa o topo; cada vaga mostra os três kits (RH, Técnica, Liderança).
+export function Painel({ vagas, curriculo }: { vagas: ResumoVaga[]; curriculo: CurriculoAtual }) {
+  return (
+    <main className="mx-auto w-full max-w-6xl px-4 pt-10 pb-24 sm:px-8 sm:pt-16">
+      {vagas.length === 0 ? <Vazio nome={curriculo.dados.nome.valor} /> : <Vagas vagas={vagas} />}
+      <SeuCurriculo curriculo={curriculo} />
+    </main>
+  );
+}
 
+function Vagas({ vagas }: { vagas: ResumoVaga[] }) {
   const proxima = vagas[0];
   const kitDaProxima = TIPOS.map((t) => proxima.kits[t]).find((k): k is ResumoKit => k !== undefined);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 pt-10 pb-24 sm:px-8 sm:pt-16">
+    <>
       <section
         aria-labelledby="titulo-proxima"
         className="grid gap-8 border-b border-fio pb-12 lg:grid-cols-[auto_1fr] lg:items-end lg:gap-16"
@@ -53,8 +64,8 @@ export function Preparacoes({ vagas }: { vagas: ResumoVaga[] }) {
                 {kitDaProxima.proxima.texto}
               </Link>
             )}
-            <Link href="/preparacoes/nova" className="text-osso underline-offset-4 hover:underline">
-              Nova preparação
+            <Link href={NOVA_VAGA} className="text-osso underline-offset-4 hover:underline">
+              Cadastrar outra vaga
             </Link>
           </div>
         </div>
@@ -62,7 +73,7 @@ export function Preparacoes({ vagas }: { vagas: ResumoVaga[] }) {
 
       <section aria-labelledby="titulo-lista" className="mt-14">
         <h2 id="titulo-lista" className="text-rotulo text-cinza-quente">
-          Suas preparações
+          Suas vagas
         </h2>
         <ol className="mt-4 space-y-12">
           {vagas.map((vaga) => (
@@ -72,7 +83,7 @@ export function Preparacoes({ vagas }: { vagas: ResumoVaga[] }) {
           ))}
         </ol>
       </section>
-    </main>
+    </>
   );
 }
 
@@ -90,7 +101,7 @@ function LinhaVaga({ vaga }: { vaga: ResumoVaga }) {
           const kit = vaga.kits[tipo];
           return (
             <li key={tipo} className="flex flex-col p-5 sm:min-h-44 sm:px-6">
-              {kit ? <PosicaoKit tipo={tipo} kit={kit} /> : <PosicaoVazia tipo={tipo} />}
+              {kit ? <PosicaoKit tipo={tipo} kit={kit} /> : <PosicaoVazia tipo={tipo} vagaId={vaga.id} />}
             </li>
           );
         })}
@@ -140,10 +151,10 @@ function PosicaoKit({ tipo, kit }: { tipo: TipoEntrevista; kit: ResumoKit }) {
   );
 }
 
-function PosicaoVazia({ tipo }: { tipo: TipoEntrevista }) {
+function PosicaoVazia({ tipo, vagaId }: { tipo: TipoEntrevista; vagaId: string }) {
   return (
     <Link
-      href="/preparacoes/nova"
+      href={`${NOVA_VAGA}?vaga=${vagaId}&tipo=${tipo}`}
       className="group flex flex-1 flex-col justify-between gap-3 rounded-[3px] text-cinza-quente transition-colors duration-200 hover:text-osso"
     >
       <span className="text-rotulo">{NOME_CURTO[tipo]}</span>
@@ -155,27 +166,72 @@ function PosicaoVazia({ tipo }: { tipo: TipoEntrevista }) {
   );
 }
 
-function Vazio() {
+function Vazio({ nome }: { nome: string }) {
+  const primeiro = nome.trim().split(/\s+/)[0];
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 pt-16 pb-24 sm:px-8 sm:pt-24">
-      <p className="text-rotulo text-cinza-quente">Suas preparações</p>
-      <h1 className="mt-3 max-w-[16ch] font-display text-display-lg font-medium text-balance">
-        Tem entrevista marcada? Comece por ela.
+    <section aria-labelledby="titulo-vazio" className="border-b border-fio pb-14 sm:pt-8">
+      <p className="text-rotulo text-cinza-quente">{primeiro ? `Currículo salvo, ${primeiro}` : "Currículo salvo"}</p>
+      <h1 id="titulo-vazio" className="mt-3 max-w-[18ch] font-display text-display-lg font-medium text-balance">
+        Agora, a vaga da sua próxima entrevista.
       </h1>
       <p className="mt-4 max-w-prose text-cinza-quente">
-        Currículo e vaga viram um roteiro curto, ensaiado e à mão na hora do show.
+        Cole a descrição, veja seu diagnóstico e escolha o que preparar: RH, técnica ou liderança.
       </p>
       <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
         <Link
-          href="/preparacoes/nova"
+          href={NOVA_VAGA}
           className="inline-block rounded-[3px] bg-fenix px-7 py-3.5 font-semibold text-noite shadow-fenix transition-transform duration-200 ease-brasa hover:-translate-y-0.5 focus-visible:outline-osso"
         >
-          Nova preparação
+          Cadastrar vaga
         </Link>
         <Link href="/kits/demo/pratica" className="text-osso underline-offset-4 hover:underline">
           Ver um kit de demonstração
         </Link>
       </div>
-    </main>
+    </section>
+  );
+}
+
+// O currículo é a base de todas as vagas; trocar não mexe nos kits já criados.
+function SeuCurriculo({ curriculo }: { curriculo: CurriculoAtual }) {
+  const { dados } = curriculo;
+  const experiencias = dados.experiencias.length;
+  const ultima = dados.experiencias[0];
+  return (
+    <section aria-labelledby="titulo-curriculo" className="mt-16 border-t border-fio pt-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
+        <h2 id="titulo-curriculo" className="text-rotulo text-cinza-quente">
+          Seu currículo
+        </h2>
+        <Link href="/comecar?atualizar=1" className="text-sm text-cinza-quente underline-offset-4 hover:text-osso hover:underline">
+          Atualizar currículo
+        </Link>
+      </div>
+      <dl className="mt-4 grid gap-x-10 gap-y-4 sm:grid-cols-[1fr_auto_auto]">
+        <div>
+          <dt className="sr-only">Nome e título</dt>
+          <dd className="font-display text-xl font-medium">{dados.nome.valor || "Sem nome"}</dd>
+          {dados.titulo.valor && <dd className="text-cinza-quente">{dados.titulo.valor}</dd>}
+        </div>
+        {ultima && (
+          <div>
+            <dt className="text-rotulo text-cinza-quente">Mais recente</dt>
+            <dd className="mt-1">
+              {[ultima.cargo.valor, ultima.empresa.valor].filter(Boolean).join(" · ")}
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt className="text-rotulo text-cinza-quente">Atualizado em</dt>
+          <dd className="mt-1 tabular-nums">
+            {new Date(curriculo.criadoEm).toLocaleDateString("pt-BR")}
+            <span className="text-cinza-quente">
+              {" "}
+              · {experiencias} {experiencias === 1 ? "experiência" : "experiências"}
+            </span>
+          </dd>
+        </div>
+      </dl>
+    </section>
   );
 }

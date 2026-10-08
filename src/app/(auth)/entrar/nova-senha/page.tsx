@@ -24,7 +24,7 @@ export default function NovaSenha() {
     const { error } = await createClient().auth.updateUser({ password: senha });
     setEnviando(false);
     if (!error) {
-      router.replace("/preparacoes");
+      router.replace("/painel");
       router.refresh();
     } else if (error.code === "same_password") {
       setErro("Escolha uma senha diferente da anterior.");

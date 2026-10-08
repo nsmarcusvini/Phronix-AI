@@ -1,62 +1,8 @@
-import type { CurriculoExtraido, Diagnostico, VagaExtraida } from "@/lib/ai/esquemas";
+import type { Diagnostico, VagaExtraida } from "@/lib/ai/esquemas";
 
-// Exemplo rotulado do wizard e da Conversa (caminho "usar exemplo").
+// Exemplo rotulado da Conversa de demonstração e da landing.
 // Mesmo candidato fictício do kit de demonstração (pleno, back-end), no mesmo
 // formato da extração real. Empresas e nomes são inventados.
-
-const c = (valor: string, baixaConfianca = false) => ({ valor, baixaConfianca });
-
-export const curriculoExemplo: CurriculoExtraido = {
-  nome: c("Alex Souza"),
-  titulo: c("Desenvolvedor back-end"),
-  experiencias: [
-    {
-      empresa: c("Loja Exemplo"),
-      cargo: c("Desenvolvedor back-end pleno"),
-      periodo: c("mar/2022 – atual"),
-      conquistas: [
-        c("Reduzi o p95 da API de pedidos de 1,8 s para 0,8 s antes da Black Friday."),
-        c("Tirei o envio de e-mails do checkout com uma fila e retry."),
-        c("Conduzi o teste de carga que evitou reescrever o módulo de frete."),
-      ],
-    },
-    {
-      empresa: c("Agência Exemplo"),
-      cargo: c("Desenvolvedor júnior"),
-      periodo: c("2021 – 2022", true),
-      conquistas: [c("Mantive APIs de sites de clientes em Node.js.")],
-    },
-  ],
-  formacao: c("Análise e Desenvolvimento de Sistemas"),
-  skills: ["Node.js", "TypeScript", "PostgreSQL", "Redis", "Docker", "Filas"],
-  idiomas: c("Inglês intermediário", true),
-  certificacoes: [],
-  ilegivel: false,
-};
-
-export const vagaExemplo = {
-  empresa: "Empresa Exemplo",
-  cargo: "Pessoa Desenvolvedora Back-end",
-  texto: `Buscamos uma pessoa desenvolvedora back-end para o time de plataforma, que processa milhões de pedidos por mês.
-
-Responsabilidades:
-- Evoluir as APIs de pedidos e pagamentos em Node.js e TypeScript.
-- Desenhar fluxos assíncronos com filas e eventos.
-- Garantir performance e confiabilidade em picos de tráfego.
-- Trabalhar com produto e operações para priorizar a dívida técnica.
-
-Requisitos:
-- Experiência com Node.js em produção.
-- PostgreSQL, modelagem e otimização de consultas.
-- Filas e mensageria (SQS, RabbitMQ ou similar).
-- Observabilidade: métricas, logs e alertas.
-
-Diferenciais:
-- Kubernetes.
-- Experiência com eventos de alto tráfego, como Black Friday.
-
-Buscamos alguém com autonomia, boa comunicação com áreas de negócio e vontade de aprender.`,
-};
 
 export const vagaExtraida: VagaExtraida = {
   cargo: "Pessoa Desenvolvedora Back-end",

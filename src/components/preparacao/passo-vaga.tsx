@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { vagaExemplo, vagaExtraida } from "@/lib/demo/preparacao";
 import type { VagaExtraida } from "@/lib/ai/esquemas";
 import type { EntradaVaga } from "@/lib/preparacao/salvar";
-import { BotaoPrimario, Processando, RotuloExemplo } from "./comum";
+import { BotaoPrimario, Processando } from "./comum";
 
 const MINIMO_CARACTERES = 300;
 
@@ -16,10 +15,10 @@ export function PassoVaga({
   onContinuar,
 }: {
   onEntrada: (entrada: EntradaVaga) => void;
-  onExtraida: (vaga: VagaExtraida, exemplo: boolean) => void;
+  onExtraida: (vaga: VagaExtraida) => void;
   onContinuar: () => void;
 }) {
-  const [lida, setLida] = useState<{ vaga: VagaExtraida; exemplo: boolean } | null>(null);
+  const [lida, setLida] = useState<VagaExtraida | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [fase, setFase] = useState<Fase>("colar");
   const [texto, setTexto] = useState("");
@@ -30,13 +29,9 @@ export function PassoVaga({
 
   const curta = texto.trim().length < MINIMO_CARACTERES;
 
-  async function ler(exemplo: boolean) {
+  async function ler() {
     setErro(null);
     setFase("lendo");
-    if (exemplo) {
-      setLida({ vaga: vagaExtraida, exemplo: true });
-      return;
-    }
     const resposta = await fetch("/api/ia/vaga", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -48,7 +43,7 @@ export function PassoVaga({
       setFase("colar");
       return;
     }
-    setLida({ vaga: corpo.vaga as VagaExtraida, exemplo: false });
+    setLida(corpo.vaga as VagaExtraida);
     setFase("entendida");
   }
 
@@ -61,8 +56,7 @@ export function PassoVaga({
         <div className="mt-10">
           <Processando
             etapas={["Separando requisitos e diferenciais", "Identificando o nível pedido", "Procurando sinais de cultura"]}
-            onFim={lida?.exemplo ? () => setFase("entendida") : undefined}
-            duracao={lida?.exemplo ? 1400 : 5000}
+            duracao={5000}
           />
         </div>
       </section>
@@ -70,7 +64,7 @@ export function PassoVaga({
   }
 
   if (fase === "entendida" && lida) {
-    const { vaga, exemplo } = lida;
+    const vaga = lida;
     return (
       <section aria-labelledby="titulo-entendida" className="animate-revelar">
         <p className="text-rotulo text-cinza-quente">O que entendemos da vaga</p>
@@ -85,11 +79,6 @@ export function PassoVaga({
             </>
           )}
         </p>
-        {exemplo && (
-          <div className="mt-6">
-            <RotuloExemplo>A leitura abaixo é da vaga de demonstração.</RotuloExemplo>
-          </div>
-        )}
 
         <dl className="mt-12 space-y-8">
           <Grupo titulo="Obrigatórios" itens={vaga.obrigatorios} forte />
@@ -103,7 +92,7 @@ export function PassoVaga({
         <div className="mt-8">
           <BotaoPrimario
             onClick={() => {
-              onExtraida(vaga, exemplo);
+              onExtraida(vaga);
               onContinuar();
             }}
           >
@@ -117,7 +106,7 @@ export function PassoVaga({
   return (
     <section aria-labelledby="titulo-vaga">
       <h1 id="titulo-vaga" className="max-w-[18ch] font-display text-display-lg font-medium text-balance">
-        Agora, a vaga.
+        Qual é a vaga?
       </h1>
       <p className="mt-4 max-w-prose text-cinza-quente">
         Cole a descrição inteira: requisitos, responsabilidades e o que mais tiver.
@@ -129,9 +118,8 @@ export function PassoVaga({
           e.preventDefault();
           setTentou(true);
           if (curta) return;
-          const exemplo = texto === vagaExemplo.texto;
-          onEntrada({ texto: texto.trim(), empresa, cargo, data, exemplo });
-          void ler(exemplo);
+          onEntrada({ texto: texto.trim(), empresa, cargo, data });
+          void ler();
         }}
       >
         <label className="block">
@@ -168,19 +156,8 @@ export function PassoVaga({
             {erro}
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-2">
+        <div className="pt-2">
           <BotaoPrimario type="submit">Ler a vaga</BotaoPrimario>
-          <button
-            type="button"
-            onClick={() => {
-              setTexto(vagaExemplo.texto);
-              setEmpresa(vagaExemplo.empresa);
-              setCargo(vagaExemplo.cargo);
-            }}
-            className="text-sm text-osso underline-offset-4 hover:underline"
-          >
-            Usar vaga de exemplo
-          </button>
         </div>
       </form>
     </section>

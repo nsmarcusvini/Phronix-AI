@@ -79,10 +79,10 @@ export function FormEntrar({ destino, linkExpirado }: { destino: string; linkExp
 
       <p className="mt-14 border-t border-fio pt-6 text-sm text-cinza-quente">
         Ainda não tem conta?{" "}
-        <Link href="/preparacoes/nova" className="text-osso underline-offset-4 hover:underline">
-          Comece uma preparação
+        <Link href="/criar-conta" className="text-osso underline-offset-4 hover:underline">
+          Criar conta
         </Link>
-        . A conta é criada quando você vê o diagnóstico.
+        .
       </p>
     </>
   );

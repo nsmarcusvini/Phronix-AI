@@ -48,7 +48,7 @@ const FAQ = [
 function BotaoComecar({ grande = false }: { grande?: boolean }) {
   return (
     <Link
-      href="/preparacoes/nova"
+      href="/criar-conta"
       className={`inline-block rounded-[3px] bg-fenix font-semibold text-noite shadow-fenix transition-transform duration-200 ease-brasa hover:-translate-y-0.5 focus-visible:outline-osso ${
         grande ? "px-9 py-4 text-lg" : "px-7 py-3.5"
       }`}

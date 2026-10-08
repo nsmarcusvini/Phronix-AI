@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const entrada = z.object({ curriculo: curriculoExtraido, vaga: vagaExtraida });
 
-// Etapa 3: diagnóstico + match (Sonnet 5.5). Só com login: é o portão do PRD.
+// Etapa 3: diagnóstico + match (Sonnet 5.5), logo depois de cadastrar a vaga.
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {

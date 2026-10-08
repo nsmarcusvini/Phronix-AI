@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/preparacoes", nome: "Preparações" },
+  { href: "/painel", nome: "Painel" },
   { href: "/conta", nome: "Conta" },
 ];
 
@@ -15,7 +15,7 @@ export function CabecalhoApp() {
     <header className="border-b border-fio">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4 sm:px-8">
         {/* Logo pendente: wordmark provisório. */}
-        <Link href="/preparacoes" className="font-display text-lg font-semibold tracking-tight">
+        <Link href="/painel" className="font-display text-lg font-semibold tracking-tight">
           Phronix
         </Link>
         <nav aria-label="Principal" className="ml-auto flex items-center text-sm">

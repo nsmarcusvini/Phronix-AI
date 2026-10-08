@@ -16,7 +16,7 @@ export function NavKit({ kitId }: { kitId: string }) {
     <header className="border-b border-fio">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 px-4 sm:px-8">
         {/* Logo pendente: wordmark provisório. */}
-        <Link href="/preparacoes" className="flex h-14 items-center font-display text-lg font-semibold tracking-tight">
+        <Link href="/painel" className="flex h-14 items-center font-display text-lg font-semibold tracking-tight">
           Phronix
         </Link>
         {kitId === "demo" && (
