@@ -16,7 +16,7 @@ O service worker só é registrado em produção (`npm run build && npm start`).
 
 ## Supabase
 
-Projeto `phronix-ai` (ref `kigjehgqdkmwvyxwyaip`, região sa-east-1). O schema está em `supabase/migrations/`, com as mesmas versões aplicadas no projeto.
+Projeto ref `xiskvlznvqjdaoudcpwk`, acessado pelo MCP do Supabase configurado em `.mcp.json`. O schema está em `supabase/migrations/`, com as mesmas versões aplicadas no projeto.
 
 - Depois de cada migration, regenere `src/lib/supabase/database.types.ts`.
 - No painel, em Authentication → URL Configuration, o Site URL e as Redirect URLs precisam incluir o endereço do app (ex.: `http://localhost:3000/**`), para o link de confirmação de e-mail voltar para `/auth/callback`.
