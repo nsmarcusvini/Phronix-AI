@@ -17,8 +17,8 @@ export function mensagemDeErro(erro: unknown): { texto: string; status: number }
     if (erro.status === 429) {
       return { texto: "Muita gente usando agora. Tente de novo em instantes.", status: 429 };
     }
-    // Chave inválida, sem permissão ou cota esgotada: problema de configuração.
-    if (erro.status === 400 || erro.status === 401 || erro.status === 403) {
+    // Chave inválida, sem permissão ou créditos esgotados (402): problema de configuração.
+    if ([400, 401, 402, 403].includes(erro.status)) {
       return { texto: "A IA está indisponível agora. Avise o suporte.", status: 503 };
     }
     return { texto: "A IA não respondeu agora. Tente de novo em instantes.", status: 502 };
