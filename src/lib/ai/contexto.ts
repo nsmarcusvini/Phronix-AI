@@ -1,5 +1,4 @@
 import "server-only";
-import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
@@ -58,10 +57,10 @@ function requisitosDaVaga(vaga: Json | null): string[] {
   return [...new Set([...lista("obrigatorios"), ...lista("diferenciais")])].slice(0, 8);
 }
 
-// Blocos de sistema: as instruções (fixas) e o contexto do kit (fixo durante a
-// preparação). O cache_control no último bloco faz o prefixo ser reaproveitado
-// entre as chamadas da mesma preparação.
-export function sistemaComContexto(instrucoes: string, ctx: ContextoKit): Anthropic.TextBlockParam[] {
+// Instrução de sistema: as instruções (fixas) e depois o contexto do kit (fixo
+// durante a preparação). O prefixo igual entre chamadas da mesma preparação
+// aproveita o cache implícito do Gemini.
+export function sistemaComContexto(instrucoes: string, ctx: ContextoKit): string {
   const contexto = [
     `Tipo de entrevista: ${NOME_TIPO[ctx.tipo]}.`,
     ctx.nivel ? `Nível do candidato: ${ctx.nivel}.` : "",
@@ -73,8 +72,5 @@ export function sistemaComContexto(instrucoes: string, ctx: ContextoKit): Anthro
     .filter(Boolean)
     .join("\n\n");
 
-  return [
-    { type: "text", text: instrucoes },
-    { type: "text", text: contexto, cache_control: { type: "ephemeral" } },
-  ];
+  return `${instrucoes}\n\n${contexto}`;
 }

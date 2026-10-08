@@ -22,7 +22,7 @@ type Props = {
   casesIniciais: CaseVisivel[];
 };
 
-// Garimpo de cases com a IA (Sonnet 5.5) em streaming. Cada mensagem vai para
+// Garimpo de cases com a IA (Gemini 3.8 Flash) em streaming. Cada mensagem vai para
 // /api/ia/conversa; a resposta chega em linhas NDJSON (texto, case, cobertura).
 export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, casesIniciais }: Props) {
   const router = useRouter();

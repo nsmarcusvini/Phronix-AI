@@ -1,8 +1,6 @@
 import "server-only";
-import type Anthropic from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { anthropic, MODELS } from "./client";
+import type { Part } from "@google/genai";
+import { MODELS } from "./client";
 import {
   curriculoExtraido,
   diagnostico,
@@ -12,6 +10,7 @@ import {
   type Diagnostico,
   type VagaExtraida,
 } from "./esquemas";
+import { gerarJson } from "./estruturado";
 import { SISTEMA_DIAGNOSTICO, SISTEMA_EXTRAIR_CURRICULO, SISTEMA_EXTRAIR_VAGA } from "./prompts";
 import { registrarUso } from "./uso";
 
@@ -31,40 +30,37 @@ async function comNovaTentativa<T>(chamada: () => Promise<T | null>): Promise<T>
 export type EntradaCurriculo = { tipo: "pdf"; base64: string } | { tipo: "texto"; texto: string };
 
 export async function extrairCurriculo(entrada: EntradaCurriculo, userId: string | null): Promise<CurriculoExtraido> {
-  const conteudo: Anthropic.ContentBlockParam[] =
+  const partes: Part[] =
     entrada.tipo === "pdf"
-      ? [
-          { type: "document", source: { type: "base64", media_type: "application/pdf", data: entrada.base64 } },
-          { type: "text", text: "Extraia os dados deste currículo." },
-        ]
-      : [{ type: "text", text: `Extraia os dados deste currículo.\n\n<curriculo>\n${entrada.texto}\n</curriculo>` }];
+      ? [{ inlineData: { mimeType: "application/pdf", data: entrada.base64 } }, { text: "Extraia os dados deste currículo." }]
+      : [{ text: `Extraia os dados deste currículo.\n\n<curriculo>\n${entrada.texto}\n</curriculo>` }];
 
   return comNovaTentativa(async () => {
-    const resposta = await anthropic().messages.parse({
-      model: MODELS.extrairCurriculo,
-      max_tokens: 8000,
-      system: SISTEMA_EXTRAIR_CURRICULO,
-      messages: [{ role: "user", content: conteudo }],
-      output_config: { format: zodOutputFormat(curriculoExtraido) },
+    const { dados, uso } = await gerarJson({
+      modelo: MODELS.extrairCurriculo,
+      sistema: SISTEMA_EXTRAIR_CURRICULO,
+      partes,
+      esquema: curriculoExtraido,
+      maxTokens: 8000,
+      pensamento: "minimo",
     });
-    await registrarUso("extrair_curriculo", MODELS.extrairCurriculo, resposta.usage, userId);
-    if (resposta.stop_reason === "refusal") return null;
-    return resposta.parsed_output;
+    await registrarUso("extrair_curriculo", MODELS.extrairCurriculo, uso, userId);
+    return dados;
   });
 }
 
 export async function extrairVaga(texto: string, userId: string | null): Promise<VagaExtraida> {
   return comNovaTentativa(async () => {
-    const resposta = await anthropic().messages.parse({
-      model: MODELS.extrairVaga,
-      max_tokens: 4000,
-      system: SISTEMA_EXTRAIR_VAGA,
-      messages: [{ role: "user", content: `Extraia os dados desta vaga.\n\n<vaga>\n${texto}\n</vaga>` }],
-      output_config: { format: zodOutputFormat(vagaExtraida) },
+    const { dados, uso } = await gerarJson({
+      modelo: MODELS.extrairVaga,
+      sistema: SISTEMA_EXTRAIR_VAGA,
+      partes: [{ text: `Extraia os dados desta vaga.\n\n<vaga>\n${texto}\n</vaga>` }],
+      esquema: vagaExtraida,
+      maxTokens: 4000,
+      pensamento: "minimo",
     });
-    await registrarUso("extrair_vaga", MODELS.extrairVaga, resposta.usage, userId);
-    if (resposta.stop_reason === "refusal") return null;
-    return resposta.parsed_output;
+    await registrarUso("extrair_vaga", MODELS.extrairVaga, uso, userId);
+    return dados;
   });
 }
 
@@ -74,23 +70,19 @@ export async function diagnosticar(
   userId: string,
 ): Promise<Diagnostico> {
   return comNovaTentativa(async () => {
-    // Sonnet 5.5 com fallback de recusa no servidor ("default" roteia pela categoria).
-    const resposta = await anthropic().beta.messages.parse({
-      model: MODELS.diagnostico,
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      system: SISTEMA_DIAGNOSTICO,
-      messages: [
+    const { dados, uso } = await gerarJson({
+      modelo: MODELS.diagnostico,
+      sistema: SISTEMA_DIAGNOSTICO,
+      partes: [
         {
-          role: "user",
-          content: `<curriculo>\n${JSON.stringify(curriculo)}\n</curriculo>\n\n<vaga>\n${JSON.stringify(vaga)}\n</vaga>`,
+          text: `<curriculo>\n${JSON.stringify(curriculo)}\n</curriculo>\n\n<vaga>\n${JSON.stringify(vaga)}\n</vaga>`,
         },
       ],
-      output_config: { effort: "medium", format: betaZodOutputFormat(diagnostico) },
+      esquema: diagnostico,
+      maxTokens: 16000,
+      pensamento: "medio",
     });
-    await registrarUso("diagnostico", resposta.model, resposta.usage, userId);
-    if (resposta.stop_reason === "refusal" || !resposta.parsed_output) return null;
-    return limitarDiagnostico(resposta.parsed_output);
+    await registrarUso("diagnostico", MODELS.diagnostico, uso, userId);
+    return dados ? limitarDiagnostico(dados) : null;
   });
 }

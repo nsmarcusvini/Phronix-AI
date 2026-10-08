@@ -1,9 +1,9 @@
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { anthropic, MODELS } from "@/lib/ai/client";
+import { MODELS } from "@/lib/ai/client";
 import { carregarContexto, sistemaComContexto } from "@/lib/ai/contexto";
 import { acaoReescrita, respostaReescrita } from "@/lib/ai/esquemas";
+import { gerarJson } from "@/lib/ai/estruturado";
 import { dentroDoLimite } from "@/lib/ai/limite";
 import { SISTEMA_REESCRITA } from "@/lib/ai/prompts";
 import { muitasTentativas, respostaDeErro } from "@/lib/ai/respostas";
@@ -34,7 +34,7 @@ const PEDIDO = {
 } as const;
 
 // Botões "Mais curto", "Mais natural", "Mais técnico" e "Regerar" do editor
-// do mapa (Haiku 4.5). Devolve a nova versão; quem grava é o aparelho, pelo
+// do mapa (Gemini 3.5 Flash-Lite). Devolve a nova versão; quem grava é o aparelho, pelo
 // mesmo caminho de qualquer edição.
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -73,15 +73,15 @@ export async function POST(request: NextRequest) {
 
   try {
     for (let tentativa = 0; tentativa < 2; tentativa++) {
-      const resposta = await anthropic().messages.parse({
-        model: MODELS.reescrita,
-        max_tokens: 2000,
-        system: sistemaComContexto(SISTEMA_REESCRITA, ctx),
-        output_config: { format: zodOutputFormat(respostaReescrita) },
-        messages: [
+      const { dados: nova, uso } = await gerarJson({
+        modelo: MODELS.reescrita,
+        sistema: sistemaComContexto(SISTEMA_REESCRITA, ctx),
+        esquema: respostaReescrita,
+        maxTokens: 2000,
+        pensamento: "baixo",
+        partes: [
           {
-            role: "user",
-            content: [
+            text: [
               `<categoria>${item.categoria}</categoria>`,
               `<pergunta>${item.pergunta}</pergunta>`,
               `<case>\n${JSON.stringify(origem)}\n</case>`,
@@ -91,8 +91,7 @@ export async function POST(request: NextRequest) {
           },
         ],
       });
-      await registrarUso("reescrita", MODELS.reescrita, resposta.usage, user.id, kitId);
-      const nova = resposta.stop_reason === "refusal" ? null : resposta.parsed_output;
+      await registrarUso("reescrita", MODELS.reescrita, uso, user.id, kitId);
       if (nova && nova.gancho.trim()) {
         return NextResponse.json({
           gancho: nova.gancho,

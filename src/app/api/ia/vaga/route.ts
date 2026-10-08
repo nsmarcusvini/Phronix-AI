@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const MINIMO = 300;
 
-// Etapa 2: extrair vaga (Haiku 4.5), quando a pessoa cadastra uma vaga no painel.
+// Etapa 2: extrair vaga (Gemini 3.5 Flash-Lite), quando a pessoa cadastra uma vaga no painel.
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {

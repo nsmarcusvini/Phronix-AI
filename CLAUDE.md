@@ -6,12 +6,12 @@ PWA que transforma currículo + vaga em um roteiro de entrevista curto, ensaiado
 
 ## Stack
 
-Next.js 16 (App Router, Turbopack) · TypeScript · Tailwind 4 · Serwist (service worker) · Dexie (IndexedDB) · Supabase (Auth, Postgres com RLS) · API do Claude · Zod.
+Next.js 16 (App Router, Turbopack) · TypeScript · Tailwind 4 · Serwist (service worker) · Dexie (IndexedDB) · Supabase (Auth, Postgres com RLS) · API do Gemini (`@google/genai`) · Zod.
 
 ## Regras do projeto
 
 - **Verdade antes de brilho.** A IA nunca inventa empresa, cargo, projeto, tecnologia ou número. Dado ausente vira `[confirmar: …]`, e cada resposta aponta para um case com origem.
-- **IA só no servidor.** Use `src/lib/ai/client.ts` (`anthropic`, `MODELS`). Sonnet 5.5 onde o usuário lê o resultado, Haiku 4.5 em extração, reescrita e validação.
+- **IA só no servidor.** Use `src/lib/ai/client.ts` (`gemini`, `MODELS`) e `gerarJson` (`src/lib/ai/estruturado.ts`) para saída com esquema Zod. Gemini 3.8 Flash onde o usuário lê o resultado, 3.5 Flash-Lite em extração, reescrita e validação. Chave em `GEMINI_API_KEY`.
 - **Hora do Show é offline.** `src/app/hora-do-show` lê só do Dexie (`src/lib/local-db.ts`), sem chamadas de rede. Fundo `bg-palco` (#000), transições de no máximo 120 ms.
 - **Conta primeiro, depois o painel.** Fluxo: `/criar-conta` → onboarding `/comecar` (só o currículo) → `/painel`, onde a pessoa cadastra vagas (`/painel/nova-vaga`: vaga → diagnóstico → escolher o kit). As rotas protegidas estão em `isProtected` (`src/lib/supabase/proxy.ts`); landing, Hora do Show e `/kits/demo/...` ficam abertas.
 - **Tipos do domínio** ficam em `src/lib/domain.ts`, com nomes de campo iguais às colunas do Postgres.

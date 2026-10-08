@@ -1,38 +1,41 @@
 import "server-only";
-import type Anthropic from "@anthropic-ai/sdk";
+import type { GenerateContentResponseUsageMetadata } from "@google/genai";
 import type { Database } from "@/lib/supabase/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Etapa = Database["public"]["Enums"]["etapa_ia"];
 
-// Preço por milhão de tokens, em dólares (tabela da Anthropic, 2026-09).
-// Escrita em cache custa 1,25x a entrada; leitura em cache, 0,1x.
-const PRECO: Record<string, { entrada: number; saida: number }> = {
-  "claude-sonnet-5-5": { entrada: 2, saida: 10 },
-  "claude-haiku-4-5": { entrada: 1, saida: 5 },
+// Preço por milhão de tokens, em dólares (tabela do Gemini, 2026-10). A saída
+// inclui os tokens de raciocínio. O 3.8 Flash dobra de preço em 2027-01-01.
+const PRECO: Record<string, { entrada: number; saida: number; cache: number }> = {
+  "gemini-3.8-flash": { entrada: 0.75, saida: 3.75, cache: 0.075 },
+  "gemini-3.5-flash-lite": { entrada: 0.3, saida: 2.5, cache: 0.03 },
 };
 
-type Uso = Pick<
-  Anthropic.Usage,
-  "input_tokens" | "output_tokens" | "cache_read_input_tokens" | "cache_creation_input_tokens"
->;
+export type Uso = { entrada: number; saida: number; cacheLeitura: number };
+
+// O Gemini conta o cache dentro do prompt; aqui ele sai da entrada cheia.
+export function usoDe(meta: GenerateContentResponseUsageMetadata | undefined): Uso {
+  const cache = meta?.cachedContentTokenCount ?? 0;
+  return {
+    entrada: Math.max(0, (meta?.promptTokenCount ?? 0) - cache),
+    saida: (meta?.candidatesTokenCount ?? 0) + (meta?.thoughtsTokenCount ?? 0),
+    cacheLeitura: cache,
+  };
+}
+
+export function somarUso(a: Uso, b: Uso): Uso {
+  return { entrada: a.entrada + b.entrada, saida: a.saida + b.saida, cacheLeitura: a.cacheLeitura + b.cacheLeitura };
+}
 
 export function custoEmDolares(modelo: string, uso: Uso) {
   const preco = PRECO[modelo];
   if (!preco) return 0;
-  const leitura = uso.cache_read_input_tokens ?? 0;
-  const escrita = uso.cache_creation_input_tokens ?? 0;
-  return (
-    (uso.input_tokens * preco.entrada +
-      escrita * preco.entrada * 1.25 +
-      leitura * preco.entrada * 0.1 +
-      uso.output_tokens * preco.saida) /
-    1_000_000
-  );
+  return (uso.entrada * preco.entrada + uso.cacheLeitura * preco.cache + uso.saida * preco.saida) / 1_000_000;
 }
 
-// Custo por kit desde o dia 1 (PRD). Só grava com usuário: antes do login a
-// extração não tem dono, e a linha de ai_usage exige user_id.
+// Custo por kit desde o dia 1 (PRD). Só grava com usuário: a linha de
+// ai_usage exige user_id.
 export async function registrarUso(etapa: Etapa, modelo: string, uso: Uso, userId: string | null, kitId?: string) {
   if (!userId) return;
   try {
@@ -42,10 +45,10 @@ export async function registrarUso(etapa: Etapa, modelo: string, uso: Uso, userI
       kit_id: kitId ?? null,
       etapa,
       modelo,
-      tokens_entrada: uso.input_tokens,
-      tokens_saida: uso.output_tokens,
-      tokens_cache_leitura: uso.cache_read_input_tokens ?? 0,
-      tokens_cache_escrita: uso.cache_creation_input_tokens ?? 0,
+      tokens_entrada: uso.entrada,
+      tokens_saida: uso.saida,
+      tokens_cache_leitura: uso.cacheLeitura,
+      tokens_cache_escrita: 0,
       custo: custoEmDolares(modelo, uso),
     });
   } catch {

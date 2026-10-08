@@ -1,19 +1,19 @@
-import Anthropic from "@anthropic-ai/sdk";
-import type { BetaMessage, BetaMessageParam, BetaTool } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import type { Content, FunctionDeclaration, Part } from "@google/genai";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { anthropic, IaIndisponivel, MODELS } from "@/lib/ai/client";
+import { gemini, MODELS } from "@/lib/ai/client";
 import { carregarContexto, sistemaComContexto } from "@/lib/ai/contexto";
 import { caseRegistrado } from "@/lib/ai/esquemas";
+import { nivelDePensamento } from "@/lib/ai/estruturado";
 import { dentroDoLimite } from "@/lib/ai/limite";
 import { SISTEMA_GARIMPO } from "@/lib/ai/prompts";
-import { muitasTentativas } from "@/lib/ai/respostas";
-import { registrarUso } from "@/lib/ai/uso";
+import { mensagemDeErro, muitasTentativas } from "@/lib/ai/respostas";
+import { registrarUso, somarUso, usoDe, type Uso } from "@/lib/ai/uso";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
 
-// Etapa 4: garimpo de cases (Sonnet 5.5), em streaming.
+// Etapa 4: garimpo de cases (Gemini 3.8 Flash), em streaming.
 // Resposta em NDJSON: {t:"texto",d} | {t:"case",case} | {t:"cobertura",cobertos,total} | {t:"fim"} | {t:"erro",erro}.
 // Quando o modelo chama registrar_case, o case é gravado e o laço continua
 // até a mensagem terminar.
@@ -23,13 +23,11 @@ const entrada = z.object({ kitId: z.uuid(), mensagem: z.string().max(4000).nulla
 const ABERTURA = "Comece a conversa: registre os cases que o currículo já sustenta e faça a primeira pergunta.";
 const MAX_VOLTAS = 4;
 
-const FERRAMENTA: BetaTool = {
+const FERRAMENTA: FunctionDeclaration = {
   name: "registrar_case",
   description:
     "Registra um case real (STAR compacto) contado pela pessoa ou presente no currículo. Use uma vez por história.",
-  strict: true,
-  eager_input_streaming: true,
-  input_schema: {
+  parametersJsonSchema: {
     type: "object",
     properties: {
       titulo: { type: "string", description: "Até 6 palavras." },
@@ -59,7 +57,7 @@ export async function POST(request: NextRequest) {
 
   const ctx = await carregarContexto(supabase, kitId);
   if (!ctx) return NextResponse.json({ erro: "Kit não encontrado." }, { status: 404 });
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json({ erro: "A IA ainda não está ligada neste ambiente." }, { status: 503 });
   }
 
@@ -80,86 +78,86 @@ export async function POST(request: NextRequest) {
   const estado = `<cases_registrados>\n${(casesAtuais ?? [])
     .map((c) => `- ${c.titulo} (cobre: ${c.requisitos.join(", ") || "nada da lista"})`)
     .join("\n")}\n</cases_registrados>`;
-  const mensagens: BetaMessageParam[] = [
-    ...(historico ?? []).map((m) => ({ role: m.papel, content: m.conteudo }) as BetaMessageParam),
-    { role: "user", content: `${estado}\n\n${mensagem ?? ABERTURA}` },
+  const conversa: Content[] = [
+    ...(historico ?? []).map((m) => ({
+      role: m.papel === "assistant" ? "model" : "user",
+      parts: [{ text: m.conteudo }],
+    })),
+    { role: "user", parts: [{ text: `${estado}\n\n${mensagem ?? ABERTURA}` }] },
   ];
   const sistema = sistemaComContexto(SISTEMA_GARIMPO, ctx);
-  const cliente = anthropic();
 
   const corpoStream = new ReadableStream({
     async start(controle) {
       const enviar = (evento: object) => controle.enqueue(new TextEncoder().encode(`${JSON.stringify(evento)}\n`));
       let textoFinal = "";
+      let uso: Uso = { entrada: 0, saida: 0, cacheLeitura: 0 };
 
       try {
         for (let volta = 0; volta < MAX_VOLTAS; volta++) {
-          const stream = cliente.beta.messages.stream({
+          const stream = await gemini().models.generateContentStream({
             model: MODELS.garimpo,
-            max_tokens: 4000,
-            betas: ["server-side-fallback-2026-07-01"],
-            fallbacks: "default",
-            output_config: { effort: "low" },
-            system: sistema,
-            tools: [FERRAMENTA],
-            messages: mensagens,
-          });
-          stream.on("text", (d) => {
-            textoFinal += d;
-            enviar({ t: "texto", d });
+            contents: conversa,
+            config: {
+              systemInstruction: sistema,
+              maxOutputTokens: 4000,
+              tools: [{ functionDeclarations: [FERRAMENTA] }],
+              thinkingConfig: nivelDePensamento("baixo"),
+            },
           });
 
-          let resposta: BetaMessage;
-          try {
-            resposta = await stream.finalMessage();
-          } catch (erro) {
-            if (erro instanceof Anthropic.APIError) throw erro;
-            continue; // entrada de ferramenta ilegível: refaz a volta
+          // As partes do modelo voltam inteiras para o histórico, com as
+          // assinaturas de raciocínio que o Gemini exige nas chamadas de função.
+          const partesDoModelo: Part[] = [];
+          let ultimoUso;
+          for await (const pedaco of stream) {
+            for (const parte of pedaco.candidates?.[0]?.content?.parts ?? []) {
+              partesDoModelo.push(parte);
+              if (parte.text && !parte.thought) {
+                textoFinal += parte.text;
+                enviar({ t: "texto", d: parte.text });
+              }
+            }
+            if (pedaco.usageMetadata) ultimoUso = pedaco.usageMetadata;
           }
-          await registrarUso("garimpo", resposta.model, resposta.usage, user.id, kitId);
+          uso = somarUso(uso, usoDe(ultimoUso));
 
-          if (resposta.stop_reason !== "tool_use") break;
+          const chamadas = partesDoModelo.filter((p) => p.functionCall?.name === "registrar_case");
+          if (chamadas.length === 0) break;
 
           // Grava cada case e devolve o resultado para o modelo continuar.
-          const resultados: BetaMessageParam = { role: "user", content: [] };
-          for (const bloco of resposta.content) {
-            if (bloco.type !== "tool_use") continue;
-            const caso = caseRegistrado.safeParse(bloco.input);
-            if (!caso.success) {
-              (resultados.content as object[]).push({
-                type: "tool_result",
-                tool_use_id: bloco.id,
-                is_error: true,
-                content: "Entrada inválida.",
-              });
-              continue;
+          const respostas: Part[] = [];
+          for (const { functionCall } of chamadas) {
+            const caso = caseRegistrado.safeParse(functionCall?.args);
+            let resultado = "Entrada inválida.";
+            if (caso.success) {
+              const c = caso.data;
+              const { data: salvo } = await supabase
+                .from("cases")
+                .insert({
+                  kit_id: kitId,
+                  titulo: c.titulo,
+                  situacao: c.situacao,
+                  acoes: c.acoes.slice(0, 2),
+                  resultado: c.resultado,
+                  metrica: c.metrica,
+                  origem: c.origem,
+                  requisitos: c.requisitos.filter((r) => ctx.requisitos.includes(r)),
+                })
+                .select("id, titulo, situacao, acoes, resultado, metrica, origem, requisitos")
+                .single();
+              if (salvo) enviar({ t: "case", case: salvo });
+              resultado = salvo ? "Case registrado." : "Não foi possível registrar.";
             }
-            const c = caso.data;
-            const { data: salvo } = await supabase
-              .from("cases")
-              .insert({
-                kit_id: kitId,
-                titulo: c.titulo,
-                situacao: c.situacao,
-                acoes: c.acoes.slice(0, 2),
-                resultado: c.resultado,
-                metrica: c.metrica,
-                origem: c.origem,
-                requisitos: c.requisitos.filter((r) => ctx.requisitos.includes(r)),
-              })
-              .select("id, titulo, situacao, acoes, resultado, metrica, origem, requisitos")
-              .single();
-            if (salvo) enviar({ t: "case", case: salvo });
-            (resultados.content as object[]).push({
-              type: "tool_result",
-              tool_use_id: bloco.id,
-              content: salvo ? "Case registrado." : "Não foi possível registrar.",
+            respostas.push({
+              functionResponse: { id: functionCall?.id, name: "registrar_case", response: { resultado } },
             });
           }
-          mensagens.push({ role: "assistant", content: resposta.content });
-          mensagens.push(resultados);
+          conversa.push({ role: "model", parts: partesDoModelo });
+          conversa.push({ role: "user", parts: respostas });
         }
 
+        await registrarUso("garimpo", MODELS.garimpo, uso, user.id, kitId);
         if (textoFinal.trim()) {
           await supabase.from("discovery_messages").insert({ kit_id: kitId, papel: "assistant", conteudo: textoFinal });
         }
@@ -168,14 +166,8 @@ export async function POST(request: NextRequest) {
         enviar({ t: "cobertura", cobertos, total: ctx.requisitos.length });
         enviar({ t: "fim" });
       } catch (erro) {
-        console.error("[ia/conversa]", erro instanceof Anthropic.APIError ? erro.status : erro);
-        enviar({
-          t: "erro",
-          erro:
-            erro instanceof IaIndisponivel
-              ? "A IA ainda não está ligada neste ambiente."
-              : "A conversa travou agora. Tente mandar de novo.",
-        });
+        const { texto, status } = mensagemDeErro(erro);
+        enviar({ t: "erro", erro: status >= 500 && status !== 503 ? "A conversa travou agora. Tente mandar de novo." : texto });
       } finally {
         controle.close();
       }

@@ -9,7 +9,7 @@ const LIMITE_BYTES = 5 * 1024 * 1024;
 const PDF = "application/pdf";
 const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-// Etapa 1: extrair currículo (Haiku 4.5), no onboarding logo depois de criar a
+// Etapa 1: extrair currículo (Gemini 3.5 Flash-Lite), no onboarding logo depois de criar a
 // conta. PDF vai direto ao modelo; DOCX vira texto.
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

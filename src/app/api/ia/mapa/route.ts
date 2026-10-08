@@ -1,9 +1,9 @@
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { anthropic, MODELS } from "@/lib/ai/client";
+import { MODELS } from "@/lib/ai/client";
 import { carregarContexto, sistemaComContexto } from "@/lib/ai/contexto";
 import { categoriaMapa, mapaGerado } from "@/lib/ai/esquemas";
+import { gerarJson } from "@/lib/ai/estruturado";
 import { dentroDoLimite } from "@/lib/ai/limite";
 import { SISTEMA_MAPA } from "@/lib/ai/prompts";
 import { muitasTentativas, respostaDeErro } from "@/lib/ai/respostas";
@@ -16,7 +16,7 @@ export const maxDuration = 120;
 const entrada = z.object({ kitId: z.uuid() });
 const ORDEM = categoriaMapa.options;
 
-// Etapa 5: gera o mapa (Sonnet 5.5) a partir do contexto e dos cases.
+// Etapa 5: gera o mapa (Gemini 3.8 Flash) a partir do contexto e dos cases.
 // Grava em qa_items; no plano grátis, além das 8 primeiras, as respostas
 // entram bloqueadas (o RLS esconde até o pagamento).
 export async function POST(request: NextRequest) {
@@ -45,22 +45,16 @@ export async function POST(request: NextRequest) {
   try {
     let gerado: z.infer<typeof mapaGerado> | null = null;
     for (let tentativa = 0; tentativa < 2 && !gerado; tentativa++) {
-      const resposta = await anthropic().beta.messages.parse({
-        model: MODELS.mapa,
-        max_tokens: 16000,
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        output_config: { effort: "medium", format: betaZodOutputFormat(mapaGerado) },
-        system: sistemaComContexto(SISTEMA_MAPA, ctx),
-        messages: [
-          {
-            role: "user",
-            content: `<cases>\n${JSON.stringify(cases ?? [])}\n</cases>\n\nEscreva o mapa desta preparação.`,
-          },
-        ],
+      const { dados, uso } = await gerarJson({
+        modelo: MODELS.mapa,
+        sistema: sistemaComContexto(SISTEMA_MAPA, ctx),
+        partes: [{ text: `<cases>\n${JSON.stringify(cases ?? [])}\n</cases>\n\nEscreva o mapa desta preparação.` }],
+        esquema: mapaGerado,
+        maxTokens: 16000,
+        pensamento: "medio",
       });
-      await registrarUso("mapa", resposta.model, resposta.usage, user.id, kitId);
-      if (resposta.stop_reason !== "refusal") gerado = resposta.parsed_output;
+      await registrarUso("mapa", MODELS.mapa, uso, user.id, kitId);
+      gerado = dados;
     }
     if (!gerado || gerado.itens.length === 0) {
       return NextResponse.json({ erro: "O mapa não saiu agora. Tente de novo." }, { status: 502 });
