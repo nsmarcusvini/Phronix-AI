@@ -17,8 +17,11 @@ import Link from "next/link";
 import { useState } from "react";
 import type { TipoEntrevista } from "@/lib/domain";
 import { entrevistaEm } from "@/lib/pratica/formatos";
+import type { MetricasPratica } from "@/lib/pratica/metricas";
 import type { CurriculoAtual } from "@/lib/preparacao/curriculo";
 import type { ResumoKit, ResumoVaga } from "@/lib/preparacao/listar";
+import { Entrevistas } from "./entrevistas";
+import { ResumoPratica } from "./resumo-pratica";
 
 const NOVA_VAGA = "/painel/nova-vaga";
 
@@ -37,19 +40,29 @@ function pronto(kit: ResumoKit | undefined) {
   return kit && kit.total ? Math.round((kit.prontas / kit.total) * 100) : 0;
 }
 
-// Painel: a casa da pessoa depois do onboarding. Responde "quanto estou
-// pronta para cada entrevista?"; cadastrar vaga e trocar o currículo ficam à
-// mão sem disputar com o placar.
-export function Painel({ vagas, curriculo }: { vagas: ResumoVaga[]; curriculo: CurriculoAtual }) {
+// Painel: a casa da pessoa depois do onboarding. A Prática vem primeiro, com
+// as métricas sempre à vista; depois o placar da vaga em foco, todas as
+// entrevistas com atalhos e o currículo.
+export function Painel({
+  vagas,
+  curriculo,
+  metricas,
+}: {
+  vagas: ResumoVaga[];
+  curriculo: CurriculoAtual;
+  metricas: MetricasPratica;
+}) {
   const [focoId, setFocoId] = useState(vagas[0]?.id ?? null);
   const foco = vagas.find((v) => v.id === focoId) ?? vagas[0];
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 pt-10 pb-24 sm:px-8 sm:pt-16">
+    <main className="mx-auto w-full max-w-6xl px-4 pt-10 pb-24 sm:px-8 sm:pt-12">
+      <ResumoPratica metricas={metricas} vagas={vagas} />
       {foco ? (
         <>
           <Foco vaga={foco} proxima={foco.id === vagas[0].id} />
           {vagas.length > 1 && <Faixa vagas={vagas} focoId={foco.id} onFocar={setFocoId} />}
+          <Entrevistas vagas={vagas} />
         </>
       ) : (
         <Vazio nome={curriculo.dados.nome.valor} />

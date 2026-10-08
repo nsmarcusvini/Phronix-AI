@@ -77,7 +77,11 @@ export function NovaVaga({
     }).catch(() => null);
     const corpo = await resposta?.json().catch(() => null);
     if (!resposta?.ok || !corpo?.diagnostico) {
-      setDiagnostico({ dados: null, carregando: false, erro: corpo?.erro ?? "Não deu para gerar o diagnóstico agora." });
+      setDiagnostico({
+        dados: null,
+        carregando: false,
+        erro: corpo?.erro ?? "Não deu para gerar o diagnóstico agora.",
+      });
       return;
     }
     setDiagnostico({ dados: corpo.diagnostico as Diagnostico, carregando: false, erro: null });
@@ -120,7 +124,9 @@ export function NovaVaga({
     }
   }
 
-  const titulo = existente ? [existente.cargo ?? "Vaga sem cargo", existente.empresa].filter(Boolean).join(" · ") : "Nova vaga";
+  const titulo = existente
+    ? [existente.cargo ?? "Vaga sem cargo", existente.empresa].filter(Boolean).join(" · ")
+    : "Nova vaga";
 
   return (
     <>

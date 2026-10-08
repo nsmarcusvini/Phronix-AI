@@ -102,7 +102,7 @@ function diaLocal(data: Date) {
 }
 
 // Dias seguidos com pelo menos uma revisão, contando até hoje ou ontem.
-export function sequencia(reviews: Review[], agora: Date) {
+export function sequencia(reviews: Pick<Review, "revisado_em">[], agora: Date) {
   const dias = new Set(reviews.map((r) => diaLocal(new Date(r.revisado_em))));
   const cursor = new Date(agora);
   if (!dias.has(diaLocal(cursor))) cursor.setDate(cursor.getDate() - 1);

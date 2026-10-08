@@ -55,10 +55,11 @@ const PASSOS: Passo[] = [
       "De 12 a 20 perguntas prováveis, cada uma com gancho, três pontos, âncoras para lembrar e o número de impacto. Tudo é editável, e a IA reescreve mais curto, mais natural ou mais técnico.",
   },
   {
+    alvo: "pratica",
     rotulo: "Prática",
     titulo: "Poucos minutos por dia.",
     texto:
-      "Flashcards, âncoras, lacunas e pergunta-relâmpago em voz alta. Acertou, a resposta avança; errou, ela volta. Com a data da entrevista, o ritmo se ajusta sozinho até o dia.",
+      "Flashcards, âncoras, lacunas e pergunta-relâmpago em voz alta. Acertou, a resposta avança; errou, ela volta. Com a data da entrevista, o ritmo se ajusta sozinho. Seus acertos, erros e quantas vezes praticou ficam sempre aqui no topo.",
   },
   {
     rotulo: "Hora do Show",

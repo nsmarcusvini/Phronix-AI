@@ -30,7 +30,9 @@ export default async function Page({ searchParams }: PageProps<"/painel/nova-vag
   if (vagaId.success) {
     const { data } = await supabase
       .from("jobs")
-      .select("id, cargo, empresa, kits ( tipo, resume_id, data_entrevista, diagnostico_json, nivel, nivel_ajustado, created_at )")
+      .select(
+        "id, cargo, empresa, kits ( tipo, resume_id, data_entrevista, diagnostico_json, nivel, nivel_ajustado, created_at )",
+      )
       .eq("id", vagaId.data)
       .maybeSingle();
     if (!data) redirect("/painel");
