@@ -1,6 +1,16 @@
 import { Campo } from "@/components/campo-inline";
 import { ComMarcadores } from "@/components/com-marcadores";
-import type { CaseRascunho, OrigemCase } from "@/lib/demo/preparacao";
+import type { OrigemCase } from "@/lib/demo/preparacao";
+
+export type CaseVisivel = {
+  id: string;
+  titulo: string;
+  situacao: string;
+  acoes: readonly string[];
+  resultado: string | null;
+  origem: OrigemCase;
+  requisitos: readonly string[];
+};
 
 const ORIGEM: Record<OrigemCase, string> = {
   cv: "do currículo",
@@ -14,7 +24,7 @@ export function CartaoCase({
   onTitulo,
   onDescartar,
 }: {
-  caso: CaseRascunho;
+  caso: CaseVisivel;
   onTitulo: (titulo: string) => void;
   onDescartar: () => void;
 }) {
@@ -51,7 +61,7 @@ export function CartaoCase({
         ))}
       </ul>
       <p className="mt-2 text-sm font-medium">
-        <ComMarcadores texto={caso.resultado} />
+        <ComMarcadores texto={caso.resultado ?? ""} />
       </p>
       <p className="mt-3 flex flex-wrap gap-1.5">
         {caso.requisitos.map((r) => (

@@ -1,5 +1,3 @@
-import type { CaseRascunho, Requisito } from "@/lib/demo/preparacao";
-
 export const META_COBERTURA = 0.8;
 
 // O momento da Conversa: cada requisito da vaga é um ponto que se preenche
@@ -9,11 +7,11 @@ export function Cobertura({
   cases,
   compacta = false,
 }: {
-  requisitos: readonly Requisito[];
-  cases: CaseRascunho[];
+  requisitos: readonly string[];
+  cases: { titulo: string; requisitos: readonly string[] }[];
   compacta?: boolean;
 }) {
-  const cobertoPor = new Map<Requisito, string>();
+  const cobertoPor = new Map<string, string>();
   for (const c of cases) for (const r of c.requisitos) if (!cobertoPor.has(r)) cobertoPor.set(r, c.titulo);
   const cobertos = requisitos.filter((r) => cobertoPor.has(r)).length;
   const fracao = requisitos.length ? cobertos / requisitos.length : 0;

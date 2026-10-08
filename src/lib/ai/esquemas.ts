@@ -65,3 +65,43 @@ export function limitarDiagnostico(d: Diagnostico): Diagnostico {
     lacunas: d.lacunas.slice(0, 3),
   };
 }
+
+// Etapa 4: case registrado pela conversa (ferramenta "registrar_case").
+export const caseRegistrado = z.object({
+  titulo: z.string(),
+  situacao: z.string(),
+  acoes: z.array(z.string()),
+  resultado: z.string(),
+  metrica: z.string().nullable(),
+  requisitos: z.array(z.string()),
+  origem: z.enum(["cv", "conversa", "estimativa"]),
+});
+export type CaseRegistrado = z.infer<typeof caseRegistrado>;
+
+// Etapa 5: o mapa de perguntas e respostas.
+export const categoriaMapa = z.enum([
+  "abertura",
+  "motivacao_fit",
+  "experiencia_cases",
+  "competencias_tecnicas",
+  "perguntas_dificeis",
+  "perguntas_entrevistador",
+]);
+
+export const mapaGerado = z.object({
+  itens: z.array(
+    z.object({
+      categoria: categoriaMapa,
+      pergunta: z.string(),
+      // Perguntas para o entrevistador não têm gancho nem âncoras.
+      gancho: z.string().nullable(),
+      bullets: z.array(z.string()),
+      ancoras: z.array(z.string()),
+      numero_impacto: z.string().nullable(),
+      expandida: z.string().nullable(),
+      // Título exato do case que sustenta a resposta, quando houver.
+      case_titulo: z.string().nullable(),
+    }),
+  ),
+});
+export type MapaGerado = z.infer<typeof mapaGerado>;
