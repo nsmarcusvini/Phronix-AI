@@ -122,7 +122,7 @@ function Foco({ vaga, proxima }: { vaga: ResumoVaga; proxima: boolean }) {
       className="grid gap-10 border-b border-fio pb-14 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-center lg:gap-16"
     >
       {/* Desktop: anéis em escala de pôster na coluna da esquerda. */}
-      <div key={`grande-${vaga.id}`} className="hidden aspect-square w-full lg:block">
+      <div key={`grande-${vaga.id}`} data-tour="aneis" className="hidden aspect-square w-full lg:block">
         <Aneis vaga={vaga} grande />
       </div>
 
@@ -133,7 +133,7 @@ function Foco({ vaga, proxima }: { vaga: ResumoVaga; proxima: boolean }) {
         {/* Celular: os anéis ficam colados na contagem, que é o momento da tela. */}
         <div className="mt-2 flex items-center justify-between gap-4">
           <Dias dias={vaga.dias} />
-          <div key={`compacto-${vaga.id}`} className="aspect-square w-28 shrink-0 sm:w-36 lg:hidden">
+          <div key={`compacto-${vaga.id}`} data-tour="aneis" className="aspect-square w-28 shrink-0 sm:w-36 lg:hidden">
             <Aneis vaga={vaga} grande />
           </div>
         </div>
@@ -157,7 +157,7 @@ function Foco({ vaga, proxima }: { vaga: ResumoVaga; proxima: boolean }) {
               {kitDaAcao.proxima.texto}
             </Link>
           )}
-          <Link href={NOVA_VAGA} className="text-osso underline-offset-4 hover:underline">
+          <Link data-tour="cadastrar-vaga" href={NOVA_VAGA} className="text-osso underline-offset-4 hover:underline">
             Cadastrar outra vaga
           </Link>
         </div>
@@ -191,7 +191,9 @@ function LinhaKit({
         </span>
         <span>
           <span className="font-medium">+ kit de {NOME_CURTO[tipo]}</span>
-          <span className="block text-sm sm:inline sm:before:content-['_·_']">Mesma vaga, sem enviar nada de novo.</span>
+          <span className="block text-sm sm:inline sm:before:content-['_·_']">
+            Mesma vaga, sem enviar nada de novo.
+          </span>
         </span>
       </Link>
     );
@@ -231,15 +233,7 @@ function LinhaKit({
 }
 
 // As outras vagas, em anéis pequenos. Tocar traz a vaga para o foco.
-function Faixa({
-  vagas,
-  focoId,
-  onFocar,
-}: {
-  vagas: ResumoVaga[];
-  focoId: string;
-  onFocar: (id: string) => void;
-}) {
+function Faixa({ vagas, focoId, onFocar }: { vagas: ResumoVaga[]; focoId: string; onFocar: (id: string) => void }) {
   return (
     <section aria-labelledby="titulo-lista" className="mt-12">
       <h2 id="titulo-lista" className="text-rotulo text-cinza-quente">
@@ -287,10 +281,23 @@ function Vazio({ nome }: { nome: string }) {
       aria-labelledby="titulo-vazio"
       className="grid gap-10 border-b border-fio pb-14 sm:pt-8 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-center lg:gap-16"
     >
-      <div aria-hidden className="order-2 mx-auto aspect-square w-full max-w-[18rem] lg:order-1 lg:max-w-none">
+      <div
+        aria-hidden
+        data-tour="aneis"
+        className="order-2 mx-auto aspect-square w-full max-w-[18rem] lg:order-1 lg:max-w-none"
+      >
         <svg viewBox="0 0 100 100" className="block size-full">
           {[45, 34, 23].map((r) => (
-            <circle key={r} cx="50" cy="50" r={r} fill="none" strokeWidth="1" strokeDasharray="1.5 3" className="stroke-cinza-quente/60" />
+            <circle
+              key={r}
+              cx="50"
+              cy="50"
+              r={r}
+              fill="none"
+              strokeWidth="1"
+              strokeDasharray="1.5 3"
+              className="stroke-cinza-quente/60"
+            />
           ))}
         </svg>
       </div>
@@ -304,6 +311,7 @@ function Vazio({ nome }: { nome: string }) {
         </p>
         <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
           <Link
+            data-tour="cadastrar-vaga"
             href={NOVA_VAGA}
             className="inline-block rounded-[3px] bg-fenix px-7 py-3.5 font-semibold text-noite shadow-fenix transition-transform duration-200 ease-brasa hover:-translate-y-0.5 focus-visible:outline-osso"
           >
@@ -324,12 +332,15 @@ function SeuCurriculo({ curriculo }: { curriculo: CurriculoAtual }) {
   const experiencias = dados.experiencias.length;
   const ultima = dados.experiencias[0];
   return (
-    <section aria-labelledby="titulo-curriculo" className="mt-16 border-t border-fio pt-8">
+    <section data-tour="curriculo" aria-labelledby="titulo-curriculo" className="mt-16 border-t border-fio pt-8">
       <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
         <h2 id="titulo-curriculo" className="text-rotulo text-cinza-quente">
           Seu currículo
         </h2>
-        <Link href="/comecar?atualizar=1" className="text-sm text-cinza-quente underline-offset-4 hover:text-osso hover:underline">
+        <Link
+          href="/comecar?atualizar=1"
+          className="text-sm text-cinza-quente underline-offset-4 hover:text-osso hover:underline"
+        >
           Atualizar currículo
         </Link>
       </div>

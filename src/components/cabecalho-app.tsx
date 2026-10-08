@@ -26,6 +26,7 @@ export function CabecalhoApp() {
                 key={l.href}
                 href={l.href}
                 aria-current={ativo ? "page" : undefined}
+                data-tour={`nav-${l.nome.toLowerCase()}`}
                 className={`relative flex h-14 items-center px-3 ${ativo ? "text-osso" : "text-cinza-quente hover:text-osso"}`}
               >
                 {l.nome}
