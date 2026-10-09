@@ -8,11 +8,13 @@ const nextConfig: NextConfig = {
   // rede (ex.: no celular), o IP precisa estar aqui; sem isso a página não
   // hidrata e os formulários não fazem nada. Não afeta produção.
   allowedDevOrigins: ["192.168.3.235"],
-  // Rotas antigas (antes do painel), para links salvos e PWAs já instalados.
+  // Rotas antigas, para links salvos e PWAs já instalados.
   async redirects() {
     return [
       { source: "/preparacoes", destination: "/painel", permanent: true },
-      { source: "/preparacoes/nova", destination: "/painel/nova-vaga", permanent: true },
+      { source: "/preparacoes/nova", destination: "/elaborar", permanent: true },
+      { source: "/painel/nova-vaga", destination: "/elaborar", permanent: true },
+      { source: "/comecar", destination: "/curriculo", permanent: true },
     ];
   },
   turbopack: {

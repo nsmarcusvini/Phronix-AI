@@ -17,15 +17,20 @@ type CampoCv = { valor: string; baixaConfianca: boolean };
 
 const ETAPAS = ["Lendo o arquivo", "Separando experiências", "Procurando números e conquistas", "Conferindo datas"];
 
-// Onboarding: o currículo é lido, revisado e vira a base de todas as vagas.
+// O currículo é lido, revisado e vira a base de todas as entrevistas. Aparece
+// em /curriculo e como primeiro passo do Elaborar, quando ainda não há um.
 export function PassoCurriculo({
   onConfirmado,
   salvando = false,
   erroSalvar = null,
+  titulo = "Comece pelo seu currículo.",
+  rotuloConfirmar = "Está certo, salvar currículo",
 }: {
   onConfirmado: (curriculo: CurriculoExtraido, entrada: EntradaCurriculo) => void;
   salvando?: boolean;
   erroSalvar?: string | null;
+  titulo?: string;
+  rotuloConfirmar?: string;
 }) {
   const [fase, setFase] = useState<Fase>("enviar");
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -104,6 +109,7 @@ export function PassoCurriculo({
         inicial={extraido.cv}
         salvando={salvando}
         erro={erroSalvar}
+        rotuloConfirmar={rotuloConfirmar}
         onConfirmar={(cv) => onConfirmado(cv, extraido.entrada)}
       />
     );
@@ -112,11 +118,10 @@ export function PassoCurriculo({
   return (
     <section aria-labelledby="titulo-curriculo">
       <h1 id="titulo-curriculo" className="max-w-[18ch] font-display text-display-lg font-medium text-balance">
-        Comece pelo seu currículo.
+        {titulo}
       </h1>
       <p className="mt-4 max-w-prose text-cinza-quente">
-        Ele vira a base de todas as suas preparações. Você confere os dados em um minuto e depois cadastra as vagas no
-        painel.
+        Ele vira a base de todas as suas entrevistas. A IA lê o arquivo e você confere os dados em um minuto.
       </p>
 
       <div className="mt-10">
@@ -225,11 +230,13 @@ function Revisao({
   inicial,
   salvando,
   erro,
+  rotuloConfirmar,
   onConfirmar,
 }: {
   inicial: CurriculoExtraido;
   salvando: boolean;
   erro: string | null;
+  rotuloConfirmar: string;
   onConfirmar: (cv: CurriculoExtraido) => void;
 }) {
   const [cv, setCv] = useState(inicial);
@@ -481,7 +488,7 @@ function Revisao({
               )}
             </p>
             <BotaoPrimario disabled={salvando} onClick={() => onConfirmar(cv)}>
-              {salvando ? "Salvando…" : "Está certo, ir para o painel"}
+              {salvando ? "Salvando…" : rotuloConfirmar}
             </BotaoPrimario>
           </div>
         </div>

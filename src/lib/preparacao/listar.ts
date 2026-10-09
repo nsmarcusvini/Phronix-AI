@@ -26,6 +26,8 @@ export type ResumoVaga = {
   id: string;
   empresa: string | null;
   cargo: string | null;
+  // Data da entrevista (aaaa-mm-dd), do kit mais recente que tiver uma.
+  data: string | null;
   dias: number | null;
   kits: Partial<Record<TipoEntrevista, ResumoKit>>;
 };
@@ -77,17 +79,23 @@ export async function listarPreparacoes(supabase: SupabaseClient<Database>): Pro
       id: vaga.id,
       empresa: vaga.empresa,
       cargo: vaga.cargo,
+      data: kit.data_entrevista,
       dias: diasAte(kit.data_entrevista, agora),
       kits: {},
     };
     // Mais de um kit do mesmo tipo: fica o mais recente (a lista já vem ordenada).
     if (!atual.kits[kit.tipo]) atual.kits[kit.tipo] = resumo;
-    if (atual.dias === null) atual.dias = diasAte(kit.data_entrevista, agora);
+    if (atual.dias === null && kit.data_entrevista) {
+      atual.dias = diasAte(kit.data_entrevista, agora);
+      atual.data = kit.data_entrevista;
+    }
     vagas.set(vaga.id, atual);
   }
 
-  // Entrevista mais próxima primeiro; sem data vai para o fim.
-  return [...vagas.values()].sort((a, b) => (a.dias ?? 9999) - (b.dias ?? 9999));
+  // Próximas primeiro (da mais perto para a mais longe), depois as sem data,
+  // e por último as que já passaram (da mais recente para a mais antiga).
+  const ordem = (dias: number | null) => (dias === null ? 10_000 : dias < 0 ? 20_000 - dias : dias);
+  return [...vagas.values()].sort((a, b) => ordem(a.dias) - ordem(b.dias));
 }
 
 function proximaAcao(id: string, tipo: TipoEntrevista, status: Status, total: number, aRevisar: number) {

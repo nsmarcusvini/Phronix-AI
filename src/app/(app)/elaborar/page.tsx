@@ -2,26 +2,26 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { diagnostico as esquemaDiagnostico } from "@/lib/ai/esquemas";
 import type { TipoEntrevista } from "@/lib/domain";
+import { CabecalhoApp } from "@/components/cabecalho-app";
 import { curriculoAtual } from "@/lib/preparacao/curriculo";
 import { createClient } from "@/lib/supabase/server";
-import { NovaVaga, type VagaExistente } from "./_components/nova-vaga";
+import { Elaborar, type VagaExistente } from "./_components/elaborar";
 
-export const metadata = { title: "Nova vaga" };
+export const metadata = { title: "Elaborar entrevista" };
 
 const tipo = z.enum(["rh", "tecnica", "lideranca"]);
 
-// Cadastro de vaga dentro da plataforma: vaga → diagnóstico → o que preparar.
-// Com ?vaga=<id>, a vaga já existe e só falta escolher outro kit para ela.
-export default async function Page({ searchParams }: PageProps<"/painel/nova-vaga">) {
+// Elaborar entrevista: (currículo, se ainda não houver) → vaga → diagnóstico →
+// escolher a entrevista → conversa dos casos → mapa. Com ?vaga=<id>, a vaga já
+// existe e só falta escolher outra entrevista para ela.
+export default async function Page({ searchParams }: PageProps<"/elaborar">) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/entrar?next=/painel/nova-vaga");
+  if (!user) redirect("/entrar?next=/elaborar");
 
   const curriculo = await curriculoAtual(supabase);
-  if (!curriculo) redirect("/comecar");
-
   const params = await searchParams;
   const vagaId = z.uuid().safeParse(params.vaga);
   const tipoPedido = tipo.safeParse(params.tipo);
@@ -37,15 +37,17 @@ export default async function Page({ searchParams }: PageProps<"/painel/nova-vag
       .maybeSingle();
     if (!data) redirect("/painel");
 
-    // O diagnóstico e a data vêm do kit mais recente da mesma vaga.
+    // O diagnóstico, o currículo e a data vêm da entrevista mais recente da mesma vaga.
     const kits = [...(data.kits ?? [])].sort((a, b) => b.created_at.localeCompare(a.created_at));
     const base = kits[0];
+    const resumeId = base?.resume_id ?? curriculo?.id;
+    if (!resumeId) redirect("/elaborar");
     const diag = esquemaDiagnostico.safeParse(base?.diagnostico_json);
     existente = {
       jobId: data.id,
       cargo: data.cargo,
       empresa: data.empresa,
-      resumeId: base?.resume_id ?? curriculo.id,
+      resumeId,
       dataEntrevista: base?.data_entrevista ?? null,
       tipos: kits.map((k) => k.tipo as TipoEntrevista),
       diagnostico:
@@ -56,10 +58,13 @@ export default async function Page({ searchParams }: PageProps<"/painel/nova-vag
   }
 
   return (
-    <NovaVaga
-      curriculo={curriculo}
-      existente={existente}
-      tipoInicial={tipoPedido.success ? tipoPedido.data : undefined}
-    />
+    <>
+      <CabecalhoApp />
+      <Elaborar
+        curriculoInicial={curriculo}
+        existente={existente}
+        tipoInicial={tipoPedido.success ? tipoPedido.data : undefined}
+      />
+    </>
   );
 }

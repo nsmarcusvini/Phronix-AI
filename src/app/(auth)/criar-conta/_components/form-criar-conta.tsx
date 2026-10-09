@@ -6,12 +6,13 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BotaoEnviar, CampoSenha, CampoTexto, MINIMO_SENHA, Mensagem } from "../../_components/campos";
 
-const DESTINO = "/comecar";
+const DESTINO = "/painel";
 
 type Estado = { tipo: "parado" } | { tipo: "erro"; texto: string } | { tipo: "confirmar" };
 
-// Criar conta por e-mail e senha. Com a sessão aberta, segue para o onboarding
-// (só o currículo); com confirmação de e-mail ligada, o link leva para lá.
+// Criar conta por e-mail e senha, e só isso: o currículo é lido depois, dentro
+// do app. Com a sessão aberta, segue para o painel; com confirmação de e-mail
+// ligada, o link leva para lá.
 export function FormCriarConta() {
   const router = useRouter();
   const [nome, setNome] = useState("");
@@ -56,8 +57,8 @@ export function FormCriarConta() {
   if (estado.tipo === "confirmar") {
     return (
       <Mensagem tipo="ok">
-        Conta criada. Enviamos um link para <span className="font-medium">{email}</span>: confirme por ele e você
-        cai direto no primeiro passo.
+        Conta criada. Enviamos um link para <span className="font-medium">{email}</span>: confirme por ele e você cai
+        direto no seu painel.
       </Mensagem>
     );
   }
@@ -65,7 +66,13 @@ export function FormCriarConta() {
   return (
     <>
       <form onSubmit={criar} className="space-y-5">
-        <CampoTexto rotulo="Como quer ser chamado" valor={nome} onChange={setNome} autoComplete="given-name" autoFocus />
+        <CampoTexto
+          rotulo="Como quer ser chamado"
+          valor={nome}
+          onChange={setNome}
+          autoComplete="given-name"
+          autoFocus
+        />
         <CampoTexto rotulo="E-mail" tipo="email" valor={email} onChange={setEmail} autoComplete="email" />
         <CampoSenha valor={senha} onChange={setSenha} nova />
 

@@ -25,7 +25,7 @@ async function usuario(supabase: Cliente) {
   return user;
 }
 
-// Onboarding: o currículo revisado vira a base de todas as vagas. O arquivo já
+// O currículo revisado vira a base de todas as entrevistas. O arquivo já
 // foi lido pelo servidor na extração (/api/ia/curriculo) e não é guardado:
 // ficam só os dados revisados (LGPD: apagar o arquivo após a leitura).
 export async function salvarCurriculo(supabase: Cliente, entrada: EntradaCurriculo, dados: CurriculoExtraido) {

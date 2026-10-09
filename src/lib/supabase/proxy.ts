@@ -4,17 +4,14 @@ import { destinoSeguro } from "@/lib/destino";
 import { supabaseKey, supabaseUrl } from "./env";
 import type { Database } from "./database.types";
 
-// A conta vem primeiro: onboarding (/comecar), painel, kits e conta pedem
-// login. Ficam abertos a landing, a Hora do Show (roda do aparelho) e o kit de
-// demonstração (/kits/demo/...), que vive só no navegador.
+// A conta vem primeiro: painel, elaborar, prática, currículo, kits e conta
+// pedem login. Ficam abertos a landing, a Hora do Show (roda do aparelho, sem
+// rede) e o kit de demonstração (/kits/demo/...), que vive só no navegador.
+const PROTEGIDAS = ["/painel", "/elaborar", "/pratica", "/curriculo", "/kits/", "/conta"];
+
 function isProtected(pathname: string) {
   if (pathname.startsWith("/kits/demo/")) return false;
-  return (
-    pathname.startsWith("/comecar") ||
-    pathname.startsWith("/painel") ||
-    pathname.startsWith("/kits/") ||
-    pathname.startsWith("/conta")
-  );
+  return PROTEGIDAS.some((rota) => pathname === rota || pathname.startsWith(rota.endsWith("/") ? rota : `${rota}/`));
 }
 
 // Quem já entrou não precisa ver de novo as telas de entrar e criar conta.
@@ -38,12 +35,8 @@ export async function updateSession(request: NextRequest) {
       setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
-        Object.entries(headers).forEach(([key, value]) =>
-          response.headers.set(key, value),
-        );
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        Object.entries(headers).forEach(([key, value]) => response.headers.set(key, value));
       },
     },
   });

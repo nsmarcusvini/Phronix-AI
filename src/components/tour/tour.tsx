@@ -5,11 +5,11 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { PLANOS } from "@/lib/planos";
 import { createClient } from "@/lib/supabase/client";
 
-// Tour guiado do primeiro acesso, no painel. Passos com alvo destacam um
-// elemento marcado com data-tour (o resto da tela escurece); passos sem alvo
-// aparecem no centro e explicam as telas que a pessoa ainda não abriu
-// (diagnóstico, conversa, mapa, prática, Hora do Show). Concluir ou pular
-// grava profiles.tour_concluido_em, e o tour não volta.
+// Tour guiado do primeiro acesso, no painel, logo depois de criar a conta.
+// Passos com alvo destacam um elemento marcado com data-tour (o resto da tela
+// escurece); passos sem alvo aparecem no centro e explicam as telas que a
+// pessoa ainda não abriu (diagnóstico, conversa dos casos, mapa). Concluir ou
+// pular grava profiles.tour_concluido_em, e o tour não volta.
 
 type Passo = { alvo?: string; rotulo: string; titulo: string; texto: string };
 
@@ -18,60 +18,72 @@ const GRATIS = PLANOS.find((p) => p.id === "gratis");
 const PASSOS: Passo[] = [
   {
     rotulo: "Boas-vindas",
-    titulo: "Seu currículo está salvo.",
+    titulo: "Sua conta está pronta.",
     texto:
-      "Em um minuto, mostro o caminho do Phronix: da vaga até a hora da entrevista, com um roteiro curto e ensaiado.",
+      "Em um minuto, mostro como o Phronix funciona: elaborar a entrevista, praticar as respostas e consultar tudo na hora.",
   },
   {
-    alvo: "cadastrar-vaga",
-    rotulo: "Painel",
-    titulo: "Tudo começa por uma vaga.",
+    alvo: "porta-elaborar",
+    rotulo: "Elaborar entrevista",
+    titulo: "Tudo começa aqui.",
     texto:
-      "Cole a descrição da vaga da sua próxima entrevista e, se souber, a data. Cada vaga vira uma preparação aqui no painel.",
+      "Na primeira vez você envia o currículo e a IA lê os dados; depois é só colar a vaga e, se souber, a data da entrevista.",
   },
   {
     rotulo: "Diagnóstico",
     titulo: "A IA compara você com a vaga.",
     texto:
-      "Você vê seu nível e o nível que a vaga pede, o match de 0 a 100, pontos fortes, lacunas e uma estratégia de posicionamento. Não concorda com o nível? Ajuste com um toque.",
+      "Seu nível e o que a vaga pede, o match de 0 a 100, pontos fortes, lacunas e uma estratégia. Depois você escolhe a entrevista: RH, Técnica ou Liderança.",
   },
   {
-    alvo: "aneis",
-    rotulo: "Entrevistas",
-    titulo: "Escolha o que preparar.",
-    texto:
-      "RH, Técnica ou Liderança: cada tipo muda as perguntas e o tom. Cada um vira um anel aqui, que fecha conforme você fica pronto para o show.",
-  },
-  {
-    rotulo: "Conversa",
+    rotulo: "Conversa dos casos",
     titulo: "As histórias que o currículo não conta.",
     texto:
-      "A IA faz uma pergunta por vez sobre os requisitos da vaga e transforma cada história num case: situação, o que você fez e o resultado. Nada é inventado: número que falta fica marcado para você confirmar.",
+      "A IA pergunta uma coisa por vez e transforma cada história num caso: situação, o que você fez e o resultado. Nada é inventado: número que falta fica marcado para você confirmar.",
   },
   {
     rotulo: "Mapa",
     titulo: "Respostas que cabem em 30 segundos.",
     texto:
-      "De 12 a 20 perguntas prováveis, cada uma com gancho, três pontos, âncoras para lembrar e o número de impacto. Tudo é editável, e a IA reescreve mais curto, mais natural ou mais técnico.",
+      "De 12 a 20 perguntas prováveis, cada uma com gancho, três pontos, âncoras e o número de impacto. Tudo editável. Pronto o mapa, a entrevista aparece aqui no painel.",
   },
   {
-    alvo: "pratica",
-    rotulo: "Prática",
+    alvo: "porta-praticar",
+    rotulo: "Praticar",
     titulo: "Poucos minutos por dia.",
     texto:
-      "Flashcards, âncoras, lacunas e pergunta-relâmpago em voz alta. Acertou, a resposta avança; errou, ela volta. Com a data da entrevista, o ritmo se ajusta sozinho. Seus acertos, erros e quantas vezes praticou ficam sempre aqui no topo.",
+      "Rodadas curtas por entrevista. Acertou, a resposta avança até o Palco; errou, ela volta. Com a data marcada, o ritmo se ajusta até o dia.",
   },
   {
+    alvo: "porta-show",
     rotulo: "Hora do Show",
     titulo: "Na entrevista, à mão.",
     texto:
-      "Uma tela escura, de leitura rápida, para consultar suas respostas ao vivo sem perder o olhar da câmera. Funciona sem internet depois de aberta uma vez.",
+      "Você escolhe qual entrevista é agora e consulta as respostas numa tela escura, de leitura rápida. Funciona sem internet.",
+  },
+  {
+    alvo: "linha-do-ensaio",
+    rotulo: "Linha do ensaio",
+    titulo: "Seu ensaio e suas datas, lado a lado.",
+    texto: "À esquerda do hoje, cada dia que você praticou e como foi. À direita, as entrevistas marcadas.",
+  },
+  {
+    alvo: "pratica",
+    rotulo: "Como foi a prática",
+    titulo: "Seus números, sempre à vista.",
+    texto: "Quantas vezes você praticou, acertos, quase e erros, e o resultado das últimas rodadas.",
+  },
+  {
+    alvo: "proximas",
+    rotulo: "Próximas entrevistas",
+    titulo: "Cada entrevista com a data e atalhos.",
+    texto: "O quanto você já está pronto e um toque para praticar, abrir o mapa ou entrar na Hora do Show.",
   },
   {
     alvo: "curriculo",
     rotulo: "Currículo",
-    titulo: "A base de todas as vagas.",
-    texto: "Mudou de emprego ou quer corrigir algo? Atualize aqui. Os kits que você já criou não mudam.",
+    titulo: "A base de todas as entrevistas.",
+    texto: "Envie quando quiser, ou deixe para a primeira entrevista. Trocar depois não muda o que já foi elaborado.",
   },
   {
     alvo: "nav-conta",
@@ -81,8 +93,8 @@ const PASSOS: Passo[] = [
   },
   {
     rotulo: "Pronto",
-    titulo: "Vamos à sua próxima entrevista?",
-    texto: "Cadastre a vaga agora. Se preferir explorar antes, abra o kit de demonstração.",
+    titulo: "Vamos elaborar a sua primeira entrevista?",
+    texto: "Tenha a vaga à mão. Se preferir explorar antes, abra o kit de demonstração.",
   },
 ];
 
@@ -140,6 +152,8 @@ export function Tour({ nome }: { nome: string | null }) {
       const destino =
         window.innerWidth < 640 ? r.top + window.scrollY - 80 : r.top + window.scrollY - window.innerHeight / 3;
       window.scrollTo({ top: Math.max(0, destino) });
+      // Alvo dentro de uma lista que rola de lado (navegação no celular).
+      if (r.left < 0 || r.right > window.innerWidth) el.scrollIntoView({ block: "nearest", inline: "center" });
     }
     cartao.current?.focus();
     // Mede no próximo quadro, já com a rolagem aplicada.
@@ -231,7 +245,7 @@ export function Tour({ nome }: { nome: string | null }) {
             </span>
           </p>
           <h2 id="tour-titulo" className="mt-2 font-display text-2xl font-medium text-balance">
-            {i === 0 && primeiro ? `${primeiro}, seu currículo está salvo.` : passo.titulo}
+            {i === 0 && primeiro ? `${primeiro}, sua conta está pronta.` : passo.titulo}
           </h2>
           <p id="tour-texto" className="mt-3 text-pretty text-cinza-quente">
             {passo.texto}
@@ -254,11 +268,11 @@ export function Tour({ nome }: { nome: string | null }) {
           {ultimo ? (
             <>
               <Link
-                href="/painel/nova-vaga"
+                href="/elaborar"
                 onClick={() => void encerrar()}
                 className="rounded-[3px] bg-fenix px-6 py-3 font-semibold text-noite shadow-fenix transition-transform duration-200 ease-brasa hover:-translate-y-0.5 focus-visible:outline-osso"
               >
-                Cadastrar minha primeira vaga
+                Elaborar minha primeira entrevista
               </Link>
               <Link
                 href="/kits/demo/pratica"
