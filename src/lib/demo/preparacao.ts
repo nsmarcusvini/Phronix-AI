@@ -7,10 +7,17 @@ import type { Diagnostico, VagaExtraida } from "@/lib/ai/esquemas";
 export const vagaExtraida: VagaExtraida = {
   cargo: "Pessoa Desenvolvedora Back-end",
   nivelPedido: { de: "pleno", ate: "senior", texto: "Pleno a sênior" },
+  resumo:
+    "Pela análise da IA, esta vaga pede alguém para evoluir com autonomia as APIs de pedidos e pagamentos em Node.js, desenhar filas e eventos e manter performance e observabilidade em picos de tráfego.",
   obrigatorios: ["Node.js em produção", "PostgreSQL e performance", "Filas e eventos", "Observabilidade"],
   diferenciais: ["Kubernetes", "Eventos de alto tráfego"],
   responsabilidades: [],
-  comportamentais: ["Autonomia", "Comunicação com negócio", "Vontade de aprender"],
+  softSkills: [
+    { nome: "Autonomia", evidencia: "Buscamos alguém com autonomia" },
+    { nome: "Comunicação com negócio", evidencia: "boa comunicação com áreas de negócio" },
+    { nome: "Colaboração", evidencia: "Trabalhar com produto e operações" },
+    { nome: "Aprendizado contínuo", evidencia: "vontade de aprender" },
+  ],
   palavrasChave: [],
   sinaisCultura: [],
 };

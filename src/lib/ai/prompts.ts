@@ -22,9 +22,18 @@ ${REGRA_DE_OURO}
 Como preencher:
 - "cargo": o título da vaga.
 - "nivelPedido": o nível pedido. Se a vaga aceita uma faixa (ex.: "pleno ou sênior"), use "de" e "ate". Se não diz, deduza pelas exigências e escreva em "texto" a frase que justifica (ex.: "Pleno a sênior").
+- "resumo": uma ou duas frases, até 45 palavras, começando com "Pela análise da IA, esta vaga pede alguém para". Liste o que a pessoa vai fazer e as tecnologias e práticas centrais que o texto cita (ex.: "desenvolver com autonomia, criar infraestrutura como código, cuidar de observabilidade e trabalhar com AWS"). Só o que está no texto; sem elogios nem adjetivos vagos.
 - "obrigatorios": requisitos explícitos, curtos (até 6 palavras cada), sem repetir.
 - "diferenciais": o que a vaga chama de desejável, diferencial ou "será um plus".
-- "comportamentais": competências de comportamento citadas.
+- "responsabilidades": o que a pessoa vai fazer no dia a dia, curto.
+- "softSkills": as competências de comportamento que a vaga pede, até 6, da mais forte para a mais fraca. Leia além das palavras óbvias ("comunicação", "trabalho em equipe"): os verbos e expressões também revelam comportamento.
+  - "liderar", "conduzir", "ser referência" → Liderança.
+  - "ser responsável por", "dono de", "garantir", "ownership" → Responsabilidade.
+  - "participar", "colaborar", "atuar junto com", "trabalhar com áreas de negócio" → Colaboração ou Comunicação com negócio.
+  - "desenvolver pessoas", "mentorar", "apoiar o crescimento do time" → Desenvolvimento de pessoas. Atenção: "desenvolver sistemas, APIs, features" é técnico, não comportamento.
+  - "com autonomia", "sem supervisão", "tomar decisões", "propor soluções" → Autonomia ou Tomada de decisão.
+  - "ambiente dinâmico", "prioridades que mudam", "aprender rápido" → Adaptabilidade ou Aprendizado contínuo.
+  Em cada uma, "nome" tem até 4 palavras e "evidencia" é o trecho curto da vaga que mostra a competência, copiado do texto (até 12 palavras). Não liste competência sem evidência no texto.
 - "palavrasChave" e "sinaisCultura": termos e valores que o texto repete ou destaca.`;
 
 export const SISTEMA_DIAGNOSTICO = `Você faz o diagnóstico de senioridade de um candidato para uma vaga, em português do Brasil, para uma ferramenta de preparação para entrevistas.
@@ -56,6 +65,7 @@ ${REGRA_DE_OURO}
 Como conduzir:
 - Uma pergunta por vez, específica e ancorada no currículo (ex.: "Na Empresa X você migrou o sistema de pagamentos. Qual foi o maior obstáculo?").
 - Priorize os requisitos da vaga que ainda não têm case. Diga qual lacuna está tentando cobrir, em poucas palavras.
+- A lista de requisitos traz também as soft skills da vaga (em <soft_skills>, com o trecho da vaga que pede cada uma). Para elas, peça um exemplo de comportamento real, como o entrevistador vai pedir: "Conte uma vez em que você…" (ex.: para Liderança, "Conte uma vez em que você conduziu o time numa decisão difícil."). Uma boa resposta tem a situação, o que a pessoa fez e o resultado.
 - Mensagens curtas: no máximo 3 frases. Tom de conversa, sem elogios vazios.
 - Se a pessoa disser que não tem o exemplo, aceite, diga que vira uma pergunta difícil com resposta honesta e siga para a próxima lacuna.
 - Se a pessoa tiver o exemplo mas não o número, ajude a estimar com honestidade (ordem de grandeza, antes e depois) e registre o case com origem "estimativa", deixando o número como [confirmar: …].
@@ -80,6 +90,7 @@ Dado que falta (número, nome, período) vira o marcador [confirmar: o que falta
 O que entregar: de 12 a 20 itens, nas categorias abertura, motivacao_fit, experiencia_cases, competencias_tecnicas, perguntas_dificeis e perguntas_entrevistador.
 - abertura: sempre o pitch de 30 segundos ("Fale sobre você.").
 - motivacao_fit: inclua a pretensão salarial, com o valor como [confirmar: valor].
+- experiencia_cases: inclua uma pergunta comportamental para cada soft skill em <soft_skills> (até 4), no formato que o entrevistador usa ("Conte uma vez em que você…", "Como você lida com…"), respondida com um case real da pessoa que mostre aquela competência. Sem case que mostre a competência, a pergunta vai para perguntas_dificeis com resposta honesta.
 - perguntas_dificeis: de 3 a 5, ligadas às lacunas do diagnóstico, com respostas honestas.
 - perguntas_entrevistador: de 3 a 5 perguntas para o candidato fazer; nelas, "gancho", "ancoras", "numero_impacto" e "expandida" ficam nulos ou vazios, e "bullets" tem 1 frase dizendo o que a pergunta revela.
 

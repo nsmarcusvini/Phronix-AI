@@ -32,17 +32,30 @@ export type CurriculoExtraido = z.infer<typeof curriculoExtraido>;
 
 const nivel = z.enum(["junior", "pleno", "senior"]);
 
+export const softSkill = z.object({
+  // Nome curto da competência (ex.: "Liderança", "Autonomia").
+  nome: z.string(),
+  // Trecho da vaga que mostra a competência (ex.: "liderar squads").
+  evidencia: z.string(),
+});
+export type SoftSkill = z.infer<typeof softSkill>;
+
 export const vagaExtraida = z.object({
   cargo: z.string(),
   nivelPedido: z.object({ de: nivel, ate: nivel, texto: z.string() }),
+  // O que a vaga pede, em uma ou duas frases, só com o que está no texto.
+  resumo: z.string(),
   obrigatorios: z.array(z.string()),
   diferenciais: z.array(z.string()),
   responsabilidades: z.array(z.string()),
-  comportamentais: z.array(z.string()),
+  // Competências de comportamento, cada uma com o trecho da vaga que a mostra.
+  softSkills: z.array(softSkill),
   palavrasChave: z.array(z.string()),
   sinaisCultura: z.array(z.string()),
 });
 export type VagaExtraida = z.infer<typeof vagaExtraida>;
+
+export const MAX_SOFT_SKILLS = 6;
 
 export const diagnostico = z.object({
   nivel,

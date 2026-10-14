@@ -55,7 +55,11 @@ export function PassoVaga({
         </h1>
         <div className="mt-10">
           <Processando
-            etapas={["Separando requisitos e diferenciais", "Identificando o nível pedido", "Procurando sinais de cultura"]}
+            etapas={[
+              "Separando requisitos e diferenciais",
+              "Identificando o nível pedido",
+              "Procurando sinais de cultura",
+            ]}
             duracao={5000}
           />
         </div>
@@ -79,15 +83,19 @@ export function PassoVaga({
             </>
           )}
         </p>
+        {vaga.resumo && (
+          <p className="mt-6 max-w-prose border-l border-osso/40 pl-4 text-lg text-pretty">{vaga.resumo}</p>
+        )}
 
         <dl className="mt-12 space-y-8">
           <Grupo titulo="Obrigatórios" itens={vaga.obrigatorios} forte />
           {vaga.diferenciais.length > 0 && <Grupo titulo="Diferenciais" itens={vaga.diferenciais} />}
-          {vaga.comportamentais.length > 0 && <Grupo titulo="Comportamento" itens={vaga.comportamentais} />}
         </dl>
 
+        {vaga.softSkills.length > 0 && <SoftSkills itens={vaga.softSkills} />}
+
         <p className="mt-12 max-w-prose text-cinza-quente">
-          Cada requisito vira uma pergunta a cobrir com um case seu na conversa.
+          Cada requisito e cada soft skill vira uma pergunta a cobrir com um caso seu na conversa.
         </p>
         <div className="mt-8">
           <BotaoPrimario
@@ -125,7 +133,9 @@ export function PassoVaga({
         <label className="block">
           <span className="flex items-baseline justify-between text-rotulo text-cinza-quente">
             Descrição da vaga
-            <span className={`tabular-nums ${tentou && curta ? "text-ambar" : ""}`}>{texto.trim().length} caracteres</span>
+            <span className={`tabular-nums ${tentou && curta ? "text-ambar" : ""}`}>
+              {texto.trim().length} caracteres
+            </span>
           </span>
           <textarea
             value={texto}
@@ -147,9 +157,7 @@ export function PassoVaga({
           <Entrada rotulo="Cargo (opcional)" valor={cargo} onChange={setCargo} />
           <Entrada rotulo="Data da entrevista" valor={data} onChange={setData} tipo="date" />
         </div>
-        <p className="-mt-4 text-sm text-cinza-quente">
-          Com a data, a prática se organiza até o dia da entrevista.
-        </p>
+        <p className="-mt-4 text-sm text-cinza-quente">Com a data, a prática se organiza até o dia da entrevista.</p>
 
         {erro && (
           <p role="alert" className="text-sm text-ambar">
@@ -206,5 +214,33 @@ function Grupo({ titulo, itens, forte = false }: { titulo: string; itens: string
         ))}
       </dd>
     </div>
+  );
+}
+
+// Soft skills que a IA leu na vaga, cada uma com o trecho que a mostra. São o
+// que o entrevistador vai pedir com "Conte uma vez em que você…".
+function SoftSkills({ itens }: { itens: VagaExtraida["softSkills"] }) {
+  return (
+    <section aria-labelledby="titulo-soft-skills" className="mt-12 border-t border-fio pt-8">
+      <h2 id="titulo-soft-skills" className="text-rotulo text-cinza-quente">
+        Soft skills que a vaga pede
+      </h2>
+      <p className="mt-2 max-w-prose text-sm text-cinza-quente">
+        Na entrevista, elas aparecem como pedidos de exemplo. Na conversa, a IA vai buscar um caso seu para cada uma.
+      </p>
+      <ul className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+        {itens.map((s, i) => (
+          <li key={s.nome} className="animate-revelar" style={{ animationDelay: `${i * 70}ms` }}>
+            <p className="font-medium">{s.nome}</p>
+            <p className="mt-0.5 text-sm text-cinza-quente">
+              <span aria-hidden>“</span>
+              {s.evidencia}
+              <span aria-hidden>”</span>
+              <span className="sr-only"> (trecho da vaga)</span>
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

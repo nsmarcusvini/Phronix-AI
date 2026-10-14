@@ -5,6 +5,7 @@ import {
   curriculoExtraido,
   diagnostico,
   limitarDiagnostico,
+  MAX_SOFT_SKILLS,
   vagaExtraida,
   type CurriculoExtraido,
   type Diagnostico,
@@ -60,7 +61,7 @@ export async function extrairVaga(texto: string, userId: string | null): Promise
       pensamento: "minimo",
     });
     await registrarUso("extrair_vaga", MODELS.extrairVaga, uso, userId);
-    return dados;
+    return dados ? { ...dados, softSkills: dados.softSkills.slice(0, MAX_SOFT_SKILLS) } : null;
   });
 }
 
