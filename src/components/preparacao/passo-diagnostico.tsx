@@ -43,6 +43,12 @@ export function PassoDiagnostico({
         <h1 id="titulo-diagnostico-carregando" className="font-display text-display-lg font-medium">
           {erro ? "O diagnóstico não saiu." : "Comparando você com a vaga"}
         </h1>
+        {!erro && (
+          <p className="mt-3 max-w-prose text-cinza-quente">
+            A IA está lendo seu currículo contra cada requisito e soft skill da vaga para dizer seu nível, o match e o
+            que reforçar na entrevista.
+          </p>
+        )}
         <div className="mt-10">
           {erro ? (
             <div className="space-y-6">
@@ -53,8 +59,15 @@ export function PassoDiagnostico({
             </div>
           ) : (
             <Processando
-              etapas={["Lendo escopo, autonomia e impacto", "Comparando com o nível pedido", "Montando a estratégia"]}
-              duracao={9000}
+              etapas={[
+                "Lendo seu currículo e a vaga",
+                "Medindo escopo, autonomia e impacto",
+                "Comparando com o nível pedido",
+                "Calculando o match com os requisitos",
+                "Separando pontos fortes e lacunas",
+                "Montando a estratégia para a entrevista",
+              ]}
+              duracao={15000}
             />
           )}
         </div>
@@ -211,7 +224,10 @@ function Lista({ titulo, itens, suave = false }: { titulo: string; itens: string
       <ul className="mt-3 space-y-2">
         {itens.map((item) => (
           <li key={item} className={`flex gap-3 ${suave ? "text-cinza-quente" : ""}`}>
-            <span aria-hidden className={`mt-[0.6em] size-1.5 shrink-0 rounded-full ${suave ? "border border-cinza-quente" : "bg-osso"}`} />
+            <span
+              aria-hidden
+              className={`mt-[0.6em] size-1.5 shrink-0 rounded-full ${suave ? "border border-cinza-quente" : "bg-osso"}`}
+            />
             {item}
           </li>
         ))}

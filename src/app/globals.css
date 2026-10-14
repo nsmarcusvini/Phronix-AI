@@ -55,6 +55,17 @@
   --animate-revelar: revelar 520ms var(--ease-brasa) both;
   /* Painel "Vestiário": o anel corre do zero até o progresso do kit (--alvo). */
   --animate-fechar-anel: fechar-anel 900ms var(--ease-trilha) both;
+  /* Carregamento da IA: brilho que corre pela barra enquanto espera a resposta. */
+  --animate-correr: correr 1.6s var(--ease-trilha) infinite;
+
+  @keyframes correr {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(400%);
+    }
+  }
 
   @keyframes revelar {
     from {

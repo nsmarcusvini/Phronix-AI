@@ -97,7 +97,7 @@ export function PassoCurriculo({
           Lendo seu currículo
         </h1>
         <div className="mt-10">
-          <Processando etapas={ETAPAS} duracao={6000} />
+          <Processando etapas={ETAPAS} duracao={10000} />
         </div>
       </section>
     );
