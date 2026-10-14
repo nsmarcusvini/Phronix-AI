@@ -57,7 +57,10 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   if (!item) return NextResponse.json({ erro: "Resposta não encontrada." }, { status: 404 });
   if (item.gancho === null) {
-    return NextResponse.json({ erro: "Perguntas para o entrevistador não têm resposta para reescrever." }, { status: 400 });
+    return NextResponse.json(
+      { erro: "Perguntas para o entrevistador não têm resposta para reescrever." },
+      { status: 400 },
+    );
   }
 
   const ctx = await carregarContexto(supabase, kitId);
@@ -73,7 +76,11 @@ export async function POST(request: NextRequest) {
 
   try {
     for (let tentativa = 0; tentativa < 2; tentativa++) {
-      const { dados: nova, uso } = await gerarJson({
+      const {
+        dados: nova,
+        uso,
+        modelo,
+      } = await gerarJson({
         modelo: MODELS.reescrita,
         sistema: sistemaComContexto(SISTEMA_REESCRITA, ctx),
         esquema: respostaReescrita,
@@ -91,7 +98,7 @@ export async function POST(request: NextRequest) {
           },
         ],
       });
-      await registrarUso("reescrita", MODELS.reescrita, uso, user.id, kitId);
+      await registrarUso("reescrita", modelo, uso, user.id, kitId);
       if (nova && nova.gancho.trim()) {
         return NextResponse.json({
           gancho: nova.gancho,

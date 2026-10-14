@@ -8,6 +8,7 @@ import { nivelDePensamento } from "@/lib/ai/estruturado";
 import { dentroDoLimite } from "@/lib/ai/limite";
 import { SISTEMA_GARIMPO } from "@/lib/ai/prompts";
 import { mensagemDeErro, muitasTentativas } from "@/lib/ai/respostas";
+import { comReserva } from "@/lib/ai/resiliente";
 import { registrarUso, somarUso, usoDe, type Uso } from "@/lib/ai/uso";
 import { createClient } from "@/lib/supabase/server";
 
@@ -92,19 +93,26 @@ export async function POST(request: NextRequest) {
       const enviar = (evento: object) => controle.enqueue(new TextEncoder().encode(`${JSON.stringify(evento)}\n`));
       let textoFinal = "";
       let uso: Uso = { entrada: 0, saida: 0, cacheLeitura: 0 };
+      // Se o modelo principal estiver sobrecarregado, a reserva assume e segue
+      // nas voltas seguintes, para não misturar modelos na mesma resposta.
+      let modelo: string = MODELS.garimpo;
 
       try {
         for (let volta = 0; volta < MAX_VOLTAS; volta++) {
-          const stream = await gemini().models.generateContentStream({
-            model: MODELS.garimpo,
-            contents: conversa,
-            config: {
-              systemInstruction: sistema,
-              maxOutputTokens: 4000,
-              tools: [{ functionDeclarations: [FERRAMENTA] }],
-              thinkingConfig: nivelDePensamento("baixo"),
-            },
-          });
+          const aberto = await comReserva(modelo, (m) =>
+            gemini().models.generateContentStream({
+              model: m,
+              contents: conversa,
+              config: {
+                systemInstruction: sistema,
+                maxOutputTokens: 4000,
+                tools: [{ functionDeclarations: [FERRAMENTA] }],
+                thinkingConfig: nivelDePensamento("baixo"),
+              },
+            }),
+          );
+          const stream = aberto.resultado;
+          modelo = aberto.modelo;
 
           // As partes do modelo voltam inteiras para o histórico, com as
           // assinaturas de raciocínio que o Gemini exige nas chamadas de função.
@@ -157,7 +165,7 @@ export async function POST(request: NextRequest) {
           conversa.push({ role: "user", parts: respostas });
         }
 
-        await registrarUso("garimpo", MODELS.garimpo, uso, user.id, kitId);
+        await registrarUso("garimpo", modelo, uso, user.id, kitId);
         if (textoFinal.trim()) {
           await supabase.from("discovery_messages").insert({ kit_id: kitId, papel: "assistant", conteudo: textoFinal });
         }
@@ -167,7 +175,10 @@ export async function POST(request: NextRequest) {
         enviar({ t: "fim" });
       } catch (erro) {
         const { texto, status } = mensagemDeErro(erro);
-        enviar({ t: "erro", erro: status >= 500 && status !== 503 ? "A conversa travou agora. Tente mandar de novo." : texto });
+        enviar({
+          t: "erro",
+          erro: status >= 500 && status !== 503 ? "A conversa travou agora. Tente mandar de novo." : texto,
+        });
       } finally {
         controle.close();
       }

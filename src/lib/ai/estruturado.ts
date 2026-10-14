@@ -2,6 +2,7 @@ import "server-only";
 import { FinishReason, ThinkingLevel, type Part } from "@google/genai";
 import { z } from "zod";
 import { gemini } from "./client";
+import { comReserva } from "./resiliente";
 import { usoDe, type Uso } from "./uso";
 
 // Saída estruturada: o esquema Zod vira JSON Schema para o Gemini e a
@@ -42,26 +43,29 @@ export async function gerarJson<T>({
   esquema: z.ZodType<T>;
   maxTokens: number;
   pensamento?: Pensamento;
-}): Promise<{ dados: T | null; uso: Uso }> {
-  const resposta = await gemini().models.generateContent({
-    model: modelo,
-    contents: [{ role: "user", parts: partes }],
-    config: {
-      systemInstruction: sistema,
-      maxOutputTokens: maxTokens,
-      responseMimeType: "application/json",
-      responseJsonSchema: esquemaJson(esquema),
-      thinkingConfig: nivelDePensamento(pensamento),
-    },
-  });
+}): Promise<{ dados: T | null; uso: Uso; modelo: string }> {
+  // Em sobrecarga do Gemini, repete e cai para o modelo reserva (resiliente.ts).
+  const { resultado: resposta, modelo: usado } = await comReserva(modelo, (m) =>
+    gemini().models.generateContent({
+      model: m,
+      contents: [{ role: "user", parts: partes }],
+      config: {
+        systemInstruction: sistema,
+        maxOutputTokens: maxTokens,
+        responseMimeType: "application/json",
+        responseJsonSchema: esquemaJson(esquema),
+        thinkingConfig: nivelDePensamento(pensamento),
+      },
+    }),
+  );
   const uso = usoDe(resposta.usageMetadata);
   const fim = resposta.candidates?.[0]?.finishReason;
-  if (fim !== FinishReason.STOP || !resposta.text) return { dados: null, uso };
+  if (fim !== FinishReason.STOP || !resposta.text) return { dados: null, uso, modelo: usado };
 
   try {
     const valido = esquema.safeParse(JSON.parse(resposta.text));
-    return { dados: valido.success ? valido.data : null, uso };
+    return { dados: valido.success ? valido.data : null, uso, modelo: usado };
   } catch {
-    return { dados: null, uso };
+    return { dados: null, uso, modelo: usado };
   }
 }

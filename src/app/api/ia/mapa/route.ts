@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   try {
     let gerado: z.infer<typeof mapaGerado> | null = null;
     for (let tentativa = 0; tentativa < 2 && !gerado; tentativa++) {
-      const { dados, uso } = await gerarJson({
+      const { dados, uso, modelo } = await gerarJson({
         modelo: MODELS.mapa,
         sistema: sistemaComContexto(SISTEMA_MAPA, ctx),
         partes: [{ text: `<cases>\n${JSON.stringify(cases ?? [])}\n</cases>\n\nEscreva o mapa desta preparação.` }],
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         maxTokens: 16000,
         pensamento: "medio",
       });
-      await registrarUso("mapa", MODELS.mapa, uso, user.id, kitId);
+      await registrarUso("mapa", modelo, uso, user.id, kitId);
       gerado = dados;
     }
     if (!gerado || gerado.itens.length === 0) {

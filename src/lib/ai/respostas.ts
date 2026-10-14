@@ -21,6 +21,13 @@ export function mensagemDeErro(erro: unknown): { texto: string; status: number }
     if ([400, 401, 402, 403].includes(erro.status)) {
       return { texto: "A IA está indisponível agora. Avise o suporte.", status: 503 };
     }
+    // Sobrecarga que nem o modelo reserva absorveu (ver resiliente.ts).
+    if ([500, 503, 504].includes(erro.status)) {
+      return {
+        texto: "A IA está com muita procura neste momento. Seus dados estão salvos: tente de novo em alguns minutos.",
+        status: 503,
+      };
+    }
     return { texto: "A IA não respondeu agora. Tente de novo em instantes.", status: 502 };
   }
   console.error("[ia] erro inesperado", erro);

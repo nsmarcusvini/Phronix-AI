@@ -33,11 +33,14 @@ export type EntradaCurriculo = { tipo: "pdf"; base64: string } | { tipo: "texto"
 export async function extrairCurriculo(entrada: EntradaCurriculo, userId: string | null): Promise<CurriculoExtraido> {
   const partes: Part[] =
     entrada.tipo === "pdf"
-      ? [{ inlineData: { mimeType: "application/pdf", data: entrada.base64 } }, { text: "Extraia os dados deste currículo." }]
+      ? [
+          { inlineData: { mimeType: "application/pdf", data: entrada.base64 } },
+          { text: "Extraia os dados deste currículo." },
+        ]
       : [{ text: `Extraia os dados deste currículo.\n\n<curriculo>\n${entrada.texto}\n</curriculo>` }];
 
   return comNovaTentativa(async () => {
-    const { dados, uso } = await gerarJson({
+    const { dados, uso, modelo } = await gerarJson({
       modelo: MODELS.extrairCurriculo,
       sistema: SISTEMA_EXTRAIR_CURRICULO,
       partes,
@@ -45,14 +48,14 @@ export async function extrairCurriculo(entrada: EntradaCurriculo, userId: string
       maxTokens: 8000,
       pensamento: "minimo",
     });
-    await registrarUso("extrair_curriculo", MODELS.extrairCurriculo, uso, userId);
+    await registrarUso("extrair_curriculo", modelo, uso, userId);
     return dados;
   });
 }
 
 export async function extrairVaga(texto: string, userId: string | null): Promise<VagaExtraida> {
   return comNovaTentativa(async () => {
-    const { dados, uso } = await gerarJson({
+    const { dados, uso, modelo } = await gerarJson({
       modelo: MODELS.extrairVaga,
       sistema: SISTEMA_EXTRAIR_VAGA,
       partes: [{ text: `Extraia os dados desta vaga.\n\n<vaga>\n${texto}\n</vaga>` }],
@@ -60,7 +63,7 @@ export async function extrairVaga(texto: string, userId: string | null): Promise
       maxTokens: 4000,
       pensamento: "minimo",
     });
-    await registrarUso("extrair_vaga", MODELS.extrairVaga, uso, userId);
+    await registrarUso("extrair_vaga", modelo, uso, userId);
     return dados ? { ...dados, softSkills: dados.softSkills.slice(0, MAX_SOFT_SKILLS) } : null;
   });
 }
@@ -71,7 +74,7 @@ export async function diagnosticar(
   userId: string,
 ): Promise<Diagnostico> {
   return comNovaTentativa(async () => {
-    const { dados, uso } = await gerarJson({
+    const { dados, uso, modelo } = await gerarJson({
       modelo: MODELS.diagnostico,
       sistema: SISTEMA_DIAGNOSTICO,
       partes: [
@@ -83,7 +86,7 @@ export async function diagnosticar(
       maxTokens: 16000,
       pensamento: "medio",
     });
-    await registrarUso("diagnostico", MODELS.diagnostico, uso, userId);
+    await registrarUso("diagnostico", modelo, uso, userId);
     return dados ? limitarDiagnostico(dados) : null;
   });
 }
