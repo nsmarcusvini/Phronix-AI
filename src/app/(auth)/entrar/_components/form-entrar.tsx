@@ -6,15 +6,21 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { BotaoEnviar, CampoSenha, CampoTexto, Mensagem } from "../../_components/campos";
 
-type Estado =
-  | { tipo: "parado" }
-  | { tipo: "erro"; texto: string }
-  | { tipo: "nao-confirmado" }
-  | { tipo: "reenviado" };
+type Estado = { tipo: "parado" } | { tipo: "erro"; texto: string } | { tipo: "nao-confirmado" } | { tipo: "reenviado" };
 
-export function FormEntrar({ destino, linkExpirado }: { destino: string; linkExpirado: boolean }) {
+export function FormEntrar({
+  destino,
+  linkExpirado,
+  contaNova = null,
+  emailInicial = "",
+}: {
+  destino: string;
+  linkExpirado: boolean;
+  contaNova?: "criada" | "confirmar" | null;
+  emailInicial?: string;
+}) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(emailInicial);
   const [senha, setSenha] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [estado, setEstado] = useState<Estado>({ tipo: "parado" });
@@ -53,10 +59,26 @@ export function FormEntrar({ destino, linkExpirado }: { destino: string; linkExp
           <Mensagem tipo="erro">O link expirou ou já foi usado. Entre com sua senha ou peça um novo.</Mensagem>
         </div>
       )}
+      {contaNova && estado.tipo === "parado" && (
+        <div className="mb-8">
+          <Mensagem tipo="ok">
+            {contaNova === "criada"
+              ? "Sua conta foi criada. Entre com o e-mail e a senha que você acabou de cadastrar."
+              : "Sua conta foi criada. Confirme pelo link que enviamos para o seu e-mail e depois entre aqui."}
+          </Mensagem>
+        </div>
+      )}
 
       <form onSubmit={entrar} className="space-y-5">
-        <CampoTexto rotulo="E-mail" tipo="email" valor={email} onChange={setEmail} autoComplete="email" autoFocus />
-        <CampoSenha valor={senha} onChange={setSenha} />
+        <CampoTexto
+          rotulo="E-mail"
+          tipo="email"
+          valor={email}
+          onChange={setEmail}
+          autoComplete="email"
+          autoFocus={!emailInicial}
+        />
+        <CampoSenha valor={senha} onChange={setSenha} autoFocus={Boolean(emailInicial)} />
 
         {estado.tipo === "erro" && <Mensagem tipo="erro">{estado.texto}</Mensagem>}
         {estado.tipo === "nao-confirmado" && (
@@ -67,11 +89,16 @@ export function FormEntrar({ destino, linkExpirado }: { destino: string; linkExp
             </button>
           </Mensagem>
         )}
-        {estado.tipo === "reenviado" && <Mensagem tipo="ok">Link reenviado. Confira a caixa de entrada e o spam.</Mensagem>}
+        {estado.tipo === "reenviado" && (
+          <Mensagem tipo="ok">Link reenviado. Confira a caixa de entrada e o spam.</Mensagem>
+        )}
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-2">
           <BotaoEnviar enviando={enviando}>Entrar</BotaoEnviar>
-          <Link href="/entrar/recuperar" className="text-sm text-cinza-quente underline-offset-4 hover:text-osso hover:underline">
+          <Link
+            href="/entrar/recuperar"
+            className="text-sm text-cinza-quente underline-offset-4 hover:text-osso hover:underline"
+          >
             Esqueci minha senha
           </Link>
         </div>

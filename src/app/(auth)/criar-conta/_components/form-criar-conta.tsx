@@ -8,11 +8,12 @@ import { BotaoEnviar, CampoSenha, CampoTexto, MINIMO_SENHA, Mensagem } from "../
 
 const DESTINO = "/painel";
 
-type Estado = { tipo: "parado" } | { tipo: "erro"; texto: string } | { tipo: "confirmar" };
+type Estado = { tipo: "parado" } | { tipo: "erro"; texto: string };
 
 // Criar conta por e-mail e senha, e só isso: o currículo é lido depois, dentro
-// do app. Com a sessão aberta, segue para o painel; com confirmação de e-mail
-// ligada, o link leva para lá.
+// do app. Criada a conta, a pessoa vai para a tela de entrar com o e-mail já
+// preenchido. Com confirmação de e-mail ligada no Supabase, o aviso pede para
+// confirmar antes; o link do e-mail também leva ao painel.
 export function FormCriarConta() {
   const router = useRouter();
   const [nome, setNome] = useState("");
@@ -29,7 +30,8 @@ export function FormCriarConta() {
     }
     setEnviando(true);
     setEstado({ tipo: "parado" });
-    const { data, error } = await createClient().auth.signUp({
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.signUp({
       email,
       password: senha,
       options: {
@@ -37,30 +39,27 @@ export function FormCriarConta() {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=${DESTINO}`,
       },
     });
-    setEnviando(false);
-    if (error) {
+    // Com confirmação ligada, e-mail repetido não dá erro: volta um usuário
+    // sem identidades.
+    const jaExiste = error?.code === "user_already_exists" || data.user?.identities?.length === 0;
+    if (error || jaExiste || !data.user) {
+      setEnviando(false);
       setEstado({
         tipo: "erro",
-        texto:
-          error.code === "user_already_exists"
-            ? "Já existe uma conta com esse e-mail. Entre com sua senha."
+        texto: jaExiste
+          ? "Já existe uma conta com esse e-mail. Entre com sua senha."
+          : error?.code === "weak_password"
+            ? "Essa senha é fraca demais. Use letras e números, com pelo menos 8 caracteres."
             : "Não deu para criar a conta agora. Tente de novo em instantes.",
       });
-    } else if (!data.session) {
-      setEstado({ tipo: "confirmar" });
-    } else {
-      router.replace(DESTINO);
-      router.refresh();
+      return;
     }
-  }
 
-  if (estado.tipo === "confirmar") {
-    return (
-      <Mensagem tipo="ok">
-        Conta criada. Enviamos um link para <span className="font-medium">{email}</span>: confirme por ele e você cai
-        direto no seu painel.
-      </Mensagem>
-    );
+    // A tela de entrar é o próximo passo: se o Supabase já abriu a sessão,
+    // ela é fechada para a pessoa entrar com a senha que acabou de criar.
+    if (data.session) await supabase.auth.signOut();
+    const aviso = data.session ? "criada" : "confirmar";
+    router.replace(`/entrar?conta=${aviso}&email=${encodeURIComponent(email)}`);
   }
 
   return (
