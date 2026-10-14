@@ -27,19 +27,22 @@ export default async function Page({ params, searchParams }: PageProps<"/kits/[k
   const ctx = await carregarContexto(supabase, kitId);
   if (!ctx) notFound();
 
-  const [{ data: mensagens }, { data: cases }] = await Promise.all([
+  const [{ data: mensagens }, { data: cases }, { data: kit }] = await Promise.all([
     supabase.from("discovery_messages").select("id, papel, conteudo").eq("kit_id", kitId).order("criado_em"),
     supabase
       .from("cases")
       .select("id, titulo, situacao, acoes, resultado, origem, requisitos")
       .eq("kit_id", kitId)
       .order("created_at"),
+    supabase.from("kits").select("vaga:jobs!kits_job_id_user_id_fkey ( cargo, empresa )").eq("id", kitId).maybeSingle(),
   ]);
+  const vaga = Array.isArray(kit?.vaga) ? kit.vaga[0] : kit?.vaga;
 
   return (
     <ConversaReal
       kitId={kitId}
       tipo={ctx.tipo}
+      vaga={vaga ? [vaga.cargo, vaga.empresa].filter(Boolean).join(", ") : null}
       requisitos={ctx.requisitos}
       mensagensIniciais={(mensagens ?? []).map((m) => ({
         id: m.id,

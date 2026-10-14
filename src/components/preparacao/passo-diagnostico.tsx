@@ -151,9 +151,7 @@ export function PassoDiagnostico({
           <p className="mt-2 max-w-prose text-lg text-pretty">{base.estrategia}</p>
         </div>
 
-        <div className="mt-12">
-          <BotaoPrimario onClick={onContinuar}>Escolher a entrevista</BotaoPrimario>
-        </div>
+        <ProximosPassos onContinuar={onContinuar} />
       </div>
     </section>
   );
@@ -233,5 +231,54 @@ function Lista({ titulo, itens, suave = false }: { titulo: string; itens: string
         ))}
       </ul>
     </div>
+  );
+}
+
+// Fecha o diagnóstico abrindo a preparação: o que vem agora, na ordem, e o
+// botão para começar. É a virada de "onde estou" para "vou me preparar".
+const CAMINHO = [
+  {
+    titulo: "Escolher a entrevista",
+    texto: "RH, técnica ou liderança. Cada uma muda as perguntas e o tom.",
+  },
+  {
+    titulo: "Construir a entrevista",
+    texto:
+      "Com base no seu currículo e nesta vaga, a IA busca os casos que provam cada requisito e monta as perguntas prováveis com as suas respostas.",
+  },
+  {
+    titulo: "Praticar até o dia",
+    texto: "Rodadas curtas até as respostas saírem naturais, e a Hora do Show para consultar ao vivo.",
+  },
+];
+
+function ProximosPassos({ onContinuar }: { onContinuar: () => void }) {
+  return (
+    <section aria-labelledby="titulo-proximos" className="mt-16 rounded-[3px] border border-fio bg-grafite p-6 sm:p-8">
+      <h2 id="titulo-proximos" className="font-display text-2xl font-medium text-balance sm:text-3xl">
+        A partir daqui, sua preparação para esta entrevista.
+      </h2>
+      <ol className="mt-8 space-y-6">
+        {CAMINHO.map((p, i) => (
+          <li key={p.titulo} className="grid grid-cols-[2rem_1fr] gap-x-3">
+            <span
+              aria-hidden
+              className={`flex size-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums ${
+                i === 0 ? "bg-fenix text-noite" : "border border-fio text-cinza-quente"
+              }`}
+            >
+              {i + 1}
+            </span>
+            <div>
+              <p className="font-medium">{p.titulo}</p>
+              <p className="mt-1 max-w-prose text-sm text-cinza-quente">{p.texto}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-10">
+        <BotaoPrimario onClick={onContinuar}>Começar a preparação</BotaoPrimario>
+      </div>
+    </section>
   );
 }

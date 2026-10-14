@@ -18,6 +18,8 @@ const CHIPS = ["Não tenho esse exemplo", "Tenho, mas sem número", "Pular"] as 
 type Props = {
   kitId: string;
   tipo: TipoEntrevista;
+  // Cargo e empresa, para o cabeçalho da construção.
+  vaga: string | null;
   requisitos: string[];
   mensagensIniciais: Mensagem[];
   casesIniciais: CaseVisivel[];
@@ -25,7 +27,7 @@ type Props = {
 
 // Garimpo de cases com a IA (Gemini 3.8 Flash) em streaming. Cada mensagem vai para
 // /api/ia/conversa; a resposta chega em linhas NDJSON (texto, case, cobertura).
-export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, casesIniciais }: Props) {
+export function ConversaReal({ kitId, tipo, vaga, requisitos, mensagensIniciais, casesIniciais }: Props) {
   const router = useRouter();
   const [mensagens, setMensagens] = useState<Mensagem[]>(mensagensIniciais);
   const [cases, setCases] = useState<CaseVisivel[]>(casesIniciais);
@@ -135,9 +137,10 @@ export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, cases
   if (gerando) {
     return (
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-14 sm:px-8">
-        <h1 className="font-display text-display-lg font-medium">Escrevendo seu mapa</h1>
+        <p className="text-rotulo text-cinza-quente">Construção, etapa 2 de 3</p>
+        <h1 className="mt-2 font-display text-display-lg font-medium">Montando suas perguntas e respostas</h1>
         <p className="mt-4 max-w-prose text-cinza-quente">
-          De 12 a 20 respostas curtas, ligadas aos seus cases. Leva menos de um minuto.
+          De 12 a 20 perguntas prováveis desta entrevista, cada uma com uma resposta curta ligada a um caso seu.
         </p>
         <div className="mt-10">
           <Processando
@@ -156,8 +159,8 @@ export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, cases
 
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 gap-10 px-4 pt-8 pb-10 sm:px-8 lg:grid-cols-[1fr_20rem] lg:gap-16">
-      <section aria-label="Conversa" className="flex min-h-[70dvh] flex-col">
-        <h1 className="text-rotulo text-cinza-quente">Garimpo de cases · {NOME_TIPO[tipo]}</h1>
+      <section aria-labelledby="titulo-construcao" className="flex min-h-[70dvh] flex-col">
+        <Construcao tipo={tipo} vaga={vaga} />
 
         <div className="mt-4 lg:hidden">
           <Cobertura requisitos={requisitos} cases={cases} compacta />
@@ -180,20 +183,31 @@ export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, cases
               <li className="max-w-[38rem]">
                 <p className="text-lg leading-relaxed whitespace-pre-line text-pretty sm:text-xl">
                   {escrevendo}
-                  <span aria-hidden className="ml-0.5 inline-block h-[1.1em] w-[2px] translate-y-[3px] animate-pulse bg-osso" />
+                  <span
+                    aria-hidden
+                    className="ml-0.5 inline-block h-[1.1em] w-[2px] translate-y-[3px] animate-pulse bg-osso"
+                  />
                 </p>
               </li>
             ) : (
               <li aria-hidden className="flex gap-1.5">
                 {[0, 1, 2].map((k) => (
-                  <span key={k} className="size-1.5 animate-pulse rounded-full bg-cinza-quente" style={{ animationDelay: `${k * 150}ms` }} />
+                  <span
+                    key={k}
+                    className="size-1.5 animate-pulse rounded-full bg-cinza-quente"
+                    style={{ animationDelay: `${k * 150}ms` }}
+                  />
                 ))}
               </li>
             ))}
           {erro && (
             <li role="alert" className="text-sm text-ambar">
               {erro}{" "}
-              <button type="button" onClick={() => void enviar(null)} className="text-osso underline underline-offset-4">
+              <button
+                type="button"
+                onClick={() => void enviar(null)}
+                className="text-osso underline underline-offset-4"
+              >
                 Tentar de novo
               </button>
             </li>
@@ -277,7 +291,7 @@ export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, cases
                 : "border border-fio text-osso hover:border-cinza-quente"
             }`}
           >
-            Gerar meu mapa
+            Montar perguntas e respostas
           </button>
           {erroMapa ? (
             <p role="alert" className="mt-2 text-sm text-ambar">
@@ -286,14 +300,14 @@ export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, cases
           ) : (
             !pronto && (
               <p className="mt-2 text-rotulo text-cinza-quente">
-                Dá para gerar agora; com 80% de cobertura o mapa fica mais forte.
+                Dá para montar agora; com 80% da vaga coberta, as respostas ficam mais fortes.
               </p>
             )
           )}
         </div>
 
         <h2 className="mt-12 text-rotulo text-cinza-quente">
-          Cases <span className="tabular-nums">({cases.length})</span>
+          Seus casos <span className="tabular-nums">({cases.length})</span>
         </h2>
         <div className="mt-4 space-y-6">
           {cases.map((c) => (
@@ -307,5 +321,49 @@ export function ConversaReal({ kitId, tipo, requisitos, mensagensIniciais, cases
         </div>
       </aside>
     </main>
+  );
+}
+
+// Cabeçalho da construção: deixa claro que aqui começa a preparação desta
+// entrevista, a partir do currículo e da vaga, e onde ela vai dar.
+const ETAPAS_CONSTRUCAO = ["Seus casos", "Perguntas e respostas", "Prática"];
+
+function Construcao({ tipo, vaga }: { tipo: TipoEntrevista; vaga: string | null }) {
+  return (
+    <header className="border-b border-fio pb-6">
+      <p className="text-rotulo text-cinza-quente">
+        Construção da {NOME_TIPO[tipo].toLowerCase()}
+        {vaga ? `, ${vaga}` : ""}
+      </p>
+      <h1 id="titulo-construcao" className="mt-2 font-display text-2xl font-medium text-balance sm:text-3xl">
+        Vamos construir sua entrevista.
+      </h1>
+      <p className="mt-2 max-w-prose text-cinza-quente">
+        Com base no seu currículo e na vaga, a IA busca os casos que provam cada requisito. Com eles, monta as perguntas
+        prováveis e as suas respostas. Depois, é praticar.
+      </p>
+      <ol aria-label="Etapas da construção" className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm">
+        {ETAPAS_CONSTRUCAO.map((etapa, i) => (
+          <li key={etapa} className="flex items-center gap-2">
+            {i > 0 && <span aria-hidden className="h-px w-6 bg-fio" />}
+            <span
+              aria-current={i === 0 ? "step" : undefined}
+              className={`flex items-center gap-2 ${i === 0 ? "text-osso" : "text-cinza-quente"}`}
+            >
+              <span
+                aria-hidden
+                className={`flex size-5 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${
+                  i === 0 ? "bg-fenix text-noite" : "border border-fio"
+                }`}
+              >
+                {i + 1}
+              </span>
+              {etapa}
+              {i === 0 && <span className="sr-only"> (agora)</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </header>
   );
 }

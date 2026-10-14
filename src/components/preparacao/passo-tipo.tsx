@@ -56,11 +56,11 @@ export function PassoTipo({
   return (
     <section aria-labelledby="titulo-tipo">
       <h1 id="titulo-tipo" className="max-w-[20ch] font-display text-display-lg font-medium text-balance">
-        Qual entrevista vem aí?
+        Qual entrevista você vai preparar?
       </h1>
       <p className="mt-4 max-w-prose text-cinza-quente">
-        Cada tipo muda as perguntas, o tom e os cases em destaque. Dá para criar os três para a mesma vaga depois,
-        sem enviar nada de novo.
+        Cada tipo muda as perguntas, o tom e os casos em destaque. Em seguida, a IA constrói essa entrevista com você.
+        Dá para preparar os três tipos para a mesma vaga depois, sem enviar nada de novo.
       </p>
 
       <div role="radiogroup" aria-labelledby="titulo-tipo" className="mt-12 border-t border-fio">
@@ -118,7 +118,7 @@ export function PassoTipo({
 
       <div className="mt-12">
         <BotaoPrimario disabled={ocupado || existentes.includes(tipo)} onClick={() => onComecar(tipo)}>
-          {ocupado ? "Criando o kit…" : "Começar a conversa"}
+          {ocupado ? "Preparando a construção…" : "Construir minha entrevista"}
         </BotaoPrimario>
       </div>
     </section>
